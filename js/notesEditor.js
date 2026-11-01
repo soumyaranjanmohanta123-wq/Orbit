@@ -872,3 +872,4 @@ export function initNotesEditor() {
   // Default to split mode on desktop, edit mode on mobile
   setViewMode(window.innerWidth >= 768 ? 'split' : 'edit');
 }
+

@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/notes.css">
+  <link rel="stylesheet" href="css/expenses.css">
 
   <!-- Markdown parser & XSS sanitizer (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -409,20 +410,181 @@
 
     <!-- ===== Expenses ===== -->
     <section id="view-expenses" class="view" role="main" aria-label="Expense tracker">
-      <div class="view__header">
-        <h1>Expenses</h1>
-        <p>Track your income and spending.</p>
+      <div class="expense-header-actions">
+        <div class="view__header" style="margin-bottom: 0;">
+          <h1>Expenses</h1>
+          <p>Track your income and spending with real-time balance calculations.</p>
+        </div>
+        <button id="expense-add-btn" class="btn btn--primary" aria-label="Add transaction">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Add Transaction</span>
+        </button>
       </div>
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="6" width="20" height="14" rx="2"/>
-          <path d="M2 10h20"/>
-          <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
-        </svg>
-        <p class="empty-state__title">No transactions yet</p>
-        <p class="empty-state__description">
-          Start tracking your income and expenses to see totals, categories, and monthly summaries.
-        </p>
+
+      <!-- Financial Metric Cards -->
+      <div class="expense-stats-grid">
+        <div class="expense-stat-card">
+          <div class="expense-stat-icon expense-stat-icon--income">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+            </svg>
+          </div>
+          <div class="expense-stat-content">
+            <span class="expense-stat-label">Total Income</span>
+            <span id="expense-stat-income" class="expense-stat-value">$0.00</span>
+          </div>
+        </div>
+
+        <div class="expense-stat-card">
+          <div class="expense-stat-icon expense-stat-icon--expenses">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+            </svg>
+          </div>
+          <div class="expense-stat-content">
+            <span class="expense-stat-label">Total Expenses</span>
+            <span id="expense-stat-expenses" class="expense-stat-value">$0.00</span>
+          </div>
+        </div>
+
+        <div class="expense-stat-card">
+          <div class="expense-stat-icon expense-stat-icon--balance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="14" rx="2"/>
+              <path d="M2 10h20"/>
+              <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="expense-stat-content">
+            <span class="expense-stat-label">Net Balance</span>
+            <span id="expense-stat-balance" class="expense-stat-value">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="expense-filter-bar">
+        <div class="expense-filter-item">
+          <label for="expense-filter-period" class="label">Period</label>
+          <select id="expense-filter-period" class="input">
+            <option value="this-month">This Month</option>
+            <option value="last-month">Last Month</option>
+            <option value="all">All Time</option>
+          </select>
+        </div>
+
+        <div class="expense-filter-item">
+          <label for="expense-filter-type" class="label">Type</label>
+          <select id="expense-filter-type" class="input">
+            <option value="all">All Types</option>
+            <option value="income">Income Only</option>
+            <option value="expense">Expenses Only</option>
+          </select>
+        </div>
+
+        <div class="expense-filter-item">
+          <label for="expense-filter-category" class="label">Category</label>
+          <select id="expense-filter-category" class="input">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+
+        <div class="expense-filter-item expense-filter-item--search">
+          <label for="expense-search-input" class="label">Search</label>
+          <input type="search" id="expense-search-input" class="input" placeholder="Search by note or category...">
+        </div>
+
+        <div class="expense-filter-reset">
+          <button id="expense-reset-filters-btn" class="btn btn--secondary btn--sm" title="Reset all filters">
+            Reset Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Transactions List Card -->
+      <div class="expense-card">
+        <div class="expense-card__header">
+          <h2 class="expense-card__title">Transactions</h2>
+          <span id="expense-count-badge" class="badge badge--primary">0 transactions</span>
+        </div>
+        <div id="expense-list"></div>
+      </div>
+
+      <!-- Add/Edit Transaction Modal -->
+      <div id="expense-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
+        <div class="modal">
+          <div class="modal__header">
+            <h2 id="expense-modal-title">Add Transaction</h2>
+            <button id="expense-modal-close" class="modal__close" aria-label="Close dialog">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <form id="expense-form" class="modal__body">
+            <div id="expense-error-msg" class="form-error" style="display: none;"></div>
+
+            <!-- Type toggle: Expense vs Income -->
+            <div class="form-group">
+              <label class="label">Transaction Type</label>
+              <div class="segmented-control" role="radiogroup">
+                <div class="segmented-control__item">
+                  <input type="radio" id="expense-type-expense" name="expense-type" value="expense" checked>
+                  <label for="expense-type-expense" class="segmented-control__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                      <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+                    </svg>
+                    <span>Expense</span>
+                  </label>
+                </div>
+                <div class="segmented-control__item">
+                  <input type="radio" id="expense-type-income" name="expense-type" value="income">
+                  <label for="expense-type-income" class="segmented-control__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                      <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+                    </svg>
+                    <span>Income</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Amount Input with Currency Prefix -->
+            <div class="form-group">
+              <label for="expense-amount" class="label">Amount ($)</label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">$</span>
+                <input type="number" id="expense-amount" class="input input--has-prefix" placeholder="0.00" step="0.01" min="0.01" required>
+              </div>
+            </div>
+
+            <!-- Category Select -->
+            <div class="form-group">
+              <label for="expense-category" class="label">Category</label>
+              <select id="expense-category" class="input" required></select>
+            </div>
+
+            <!-- Date Input -->
+            <div class="form-group">
+              <label for="expense-date" class="label">Date</label>
+              <input type="date" id="expense-date" class="input" required>
+            </div>
+
+            <!-- Note / Description Input -->
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="expense-note" class="label">Note / Description (Optional)</label>
+              <input type="text" id="expense-note" class="input" placeholder="e.g. Grocery run, Client payment, Electric bill" maxlength="120">
+            </div>
+
+            <div class="modal__footer" style="margin-top: var(--space-5);">
+              <button type="button" id="expense-modal-cancel" class="btn btn--secondary">Cancel</button>
+              <button type="submit" id="expense-modal-submit" class="btn btn--primary">Save Transaction</button>
+            </div>
+          </form>
+        </div>
       </div>
     </section>
 
