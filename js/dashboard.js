@@ -275,3 +275,4 @@ export function initDashboard() {
   // 4. Initial render
   renderDashboard();
 }
+

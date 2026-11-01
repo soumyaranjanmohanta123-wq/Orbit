@@ -57,6 +57,7 @@
 }
 
 .routine-progress-fill {
+  width: 0%;
   height: 100%;
   background: linear-gradient(90deg, var(--color-primary), var(--color-success));
   border-radius: var(--radius-full);

@@ -1255,10 +1255,17 @@
 
 @media (max-width: 767px) {
   .notes-editor__top-bar,
-  .notes-toolbar,
   .notes-editor__footer {
     padding-left: var(--space-3);
     padding-right: var(--space-3);
+  }
+
+  .notes-toolbar {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .notes-editor__title-container {
