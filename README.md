@@ -34,7 +34,8 @@ Orbit/
 │   ├── storage.js          Safe localStorage wrapper
 │   ├── ui.js               Theme toggle, navigation, sidebar
 │   ├── notesStore.js       Notes & folders data model + CRUD
-│   └── notesTree.js        Folder tree UI, DND, context menu, breadcrumbs
+│   ├── notesTree.js        Folder tree UI, DND, context menu, breadcrumbs
+│   └── notesEditor.js      Markdown editor, toolbar, autosave, preview
 ├── assets/                 (reserved for future static assets)
 └── README.md
 ```
@@ -50,6 +51,7 @@ Orbit/
 
 - **Step 1** — Project structure, design system, base layout, sidebar navigation, light/dark mode, responsive shell.
 - **Step 2A** — Notes data model & folder tree: nested folders, drag & drop, context menu, modal move, inline rename, breadcrumbs, search, keyboard navigation.
+- **Step 2B** — Markdown note editor: formatting toolbar, Edit/Split/Preview view modes, 500ms debounced autosave, interactive preview checklist, keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+S, Tab), copy, and .md export.
 
 ## License
 

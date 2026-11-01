@@ -17,6 +17,10 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/notes.css">
 
+  <!-- Markdown parser & XSS sanitizer (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
   <!-- Inline SVG favicon — a planet with an orbit ring -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cellipse cx='12' cy='12' rx='10' ry='4.5' transform='rotate(-30 12 12)'/%3E%3C/svg%3E">
 </head>
@@ -228,8 +232,8 @@
             <nav id="notes-breadcrumbs" class="breadcrumbs" aria-label="Breadcrumb navigation" style="border-bottom: none; flex: 1;"></nav>
           </div>
 
-          <!-- Content display for Step 2A (Editor will be connected in Step 2B) -->
-          <div id="notes-content-area" class="scrollable" style="flex: 1; display: flex; flex-direction: column;">
+          <!-- Main Content Area: Editor or Empty State -->
+          <div id="notes-content-area" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
             <!-- Empty state when no note is selected -->
             <div id="notes-empty-state" class="empty-state" style="flex: 1; justify-content: center; margin: auto;">
               <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -244,22 +248,156 @@
               </p>
             </div>
 
-            <!-- Note selected placeholder -->
-            <div id="notes-selected-preview" style="display: none; padding: var(--space-8); max-width: 800px; margin: 0 auto; width: 100%;">
-              <div style="margin-bottom: var(--space-4);">
-                <h1 id="notes-preview-title" style="font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-text-primary);"></h1>
+            <!-- Full Note Editor (visible when a note is selected) -->
+            <div id="notes-editor" class="notes-editor mode-split" style="display: none;">
+              <!-- Top bar: view modes + extra actions -->
+              <div class="notes-editor__top-bar">
+                <div class="view-mode-toggle" role="group" aria-label="Editor view mode">
+                  <button type="button" class="view-mode-btn" data-mode="edit" aria-pressed="false" title="Edit mode (source only)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    <span>Edit</span>
+                  </button>
+                  <button type="button" class="view-mode-btn active" data-mode="split" aria-pressed="true" title="Split mode (side-by-side live preview)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>
+                    </svg>
+                    <span>Split</span>
+                  </button>
+                  <button type="button" class="view-mode-btn" data-mode="preview" aria-pressed="false" title="Preview mode (rendered Markdown)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>Preview</span>
+                  </button>
+                </div>
+
+                <div class="notes-editor__actions">
+                  <span id="notes-status-save" class="notes-status-save">Saved just now</span>
+                  <button id="notes-pin-btn" type="button" class="action-icon-btn" title="Pin note" aria-label="Pin note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 17v5"/><path d="M9 11l-4 4h14l-4-4V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v7z"/>
+                    </svg>
+                  </button>
+                  <button id="notes-copy-btn" type="button" class="action-icon-btn" title="Copy markdown content" aria-label="Copy markdown content">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  </button>
+                  <button id="notes-export-btn" type="button" class="action-icon-btn" title="Export as .md file" aria-label="Export as Markdown file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div style="display: flex; gap: var(--space-4); color: var(--color-text-tertiary); font-size: var(--text-xs); margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3);">
-                <span id="notes-preview-updated"></span>
-                <span id="notes-preview-path"></span>
+
+              <!-- Formatting toolbar -->
+              <div class="notes-toolbar" role="toolbar" aria-label="Markdown formatting toolbar">
+                <button type="button" class="notes-toolbar__btn" data-format="bold" title="Bold (Ctrl+B)" aria-label="Bold">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="italic" title="Italic (Ctrl+I)" aria-label="Italic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="strikethrough" title="Strikethrough" aria-label="Strikethrough">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 4H9a3 3 0 0 0-2.83 4M14 12a4 4 0 0 1 0 8H6"/><line x1="4" y1="12" x2="20" y2="12"/>
+                  </svg>
+                </button>
+
+                <div class="notes-toolbar__divider"></div>
+
+                <button type="button" class="notes-toolbar__btn" data-format="h1" title="Heading 1" aria-label="Heading 1">H1</button>
+                <button type="button" class="notes-toolbar__btn" data-format="h2" title="Heading 2" aria-label="Heading 2">H2</button>
+                <button type="button" class="notes-toolbar__btn" data-format="h3" title="Heading 3" aria-label="Heading 3">H3</button>
+
+                <div class="notes-toolbar__divider"></div>
+
+                <button type="button" class="notes-toolbar__btn" data-format="bullet" title="Bulleted list" aria-label="Bulleted list">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+                    <circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="numbered" title="Numbered list" aria-label="Numbered list">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+                    <path d="M4 6h1v4"/><path d="M4 10h2"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="check" title="Task checklist" aria-label="Task checklist">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="6" height="6" rx="1"/><path d="m5 8 1 1 2-2"/>
+                    <line x1="13" y1="8" x2="21" y2="8"/><rect x="3" y="13" width="6" height="6" rx="1"/><line x1="13" y1="16" x2="21" y2="16"/>
+                  </svg>
+                </button>
+
+                <div class="notes-toolbar__divider"></div>
+
+                <button type="button" class="notes-toolbar__btn" data-format="quote" title="Quote block" aria-label="Quote">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+                    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="code" title="Inline code" aria-label="Inline code">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="codeblock" title="Fenced code block" aria-label="Code block">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 10-2 2 2 2"/><path d="m15 10 2 2-2 2"/>
+                  </svg>
+                </button>
+
+                <div class="notes-toolbar__divider"></div>
+
+                <button type="button" class="notes-toolbar__btn" data-format="link" title="Link (Ctrl+K)" aria-label="Insert Link">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="hr" title="Horizontal divider" aria-label="Horizontal line">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                  </svg>
+                </button>
               </div>
-              <div class="card" style="background: var(--color-surface); border: 1px dashed var(--color-border-strong); padding: var(--space-6); text-align: center;">
-                <p style="font-weight: var(--weight-medium); color: var(--color-text-primary); margin-bottom: var(--space-2);">
-                  Notes Data Model & Folder Tree Active (Step 2A)
-                </p>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary); max-width: 520px; margin: 0 auto;">
-                  Folders and notes are synchronized with browser storage. You can create, rename, delete, nest, duplicate, and drag-and-drop items. The Markdown editor with toolbar and live preview arrives in <strong>Step 2B</strong>.
-                </p>
+
+              <!-- Editable Title -->
+              <div class="notes-editor__title-container">
+                <input type="text" id="notes-editor-title" class="notes-editor__title" placeholder="Untitled Note" aria-label="Note title">
+              </div>
+
+              <!-- Main editing body: Textarea (left) and Live Preview (right) -->
+              <div class="notes-editor__body">
+                <div class="notes-editor__pane notes-editor__pane--edit">
+                  <textarea id="notes-textarea" class="notes-editor__textarea" placeholder="Start typing in Markdown... (Ctrl+B, Ctrl+I, Ctrl+K, Tab to indent)" aria-label="Markdown content"></textarea>
+                </div>
+                <div class="notes-editor__pane notes-editor__pane--preview">
+                  <div id="notes-preview" class="markdown-body" aria-label="Rendered Markdown preview"></div>
+                </div>
+              </div>
+
+              <!-- Status footer: word/character counters & read time -->
+              <div class="notes-editor__footer">
+                <div class="notes-editor__stats">
+                  <span id="notes-status-words">0 words</span>
+                  <span id="notes-status-chars">0 characters</span>
+                  <span id="notes-status-readtime">1 min read</span>
+                </div>
+                <div>Markdown Mode</div>
               </div>
             </div>
           </div>
