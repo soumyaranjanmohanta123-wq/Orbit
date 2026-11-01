@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/notes.css">
   <link rel="stylesheet" href="css/expenses.css">
+  <link rel="stylesheet" href="css/routines.css">
 
   <!-- Markdown parser & XSS sanitizer (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -590,19 +591,86 @@
 
     <!-- ===== Routines ===== -->
     <section id="view-routines" class="view" role="main" aria-label="Routine tracker">
-      <div class="view__header">
-        <h1>Routines</h1>
-        <p>Build daily habits and track your streaks.</p>
+      <div class="routine-header-actions">
+        <div class="view__header" style="margin-bottom: 0;">
+          <h1>Routines</h1>
+          <p>Build daily habits and keep your streaks alive.</p>
+        </div>
+        <button id="routine-add-btn" class="btn btn--primary" aria-label="Add habit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Add Habit</span>
+        </button>
       </div>
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <p class="empty-state__title">No routines yet</p>
-        <p class="empty-state__description">
-          Add daily habits you want to build. Check them off each day and watch your streaks grow.
-        </p>
+
+      <!-- Today's Routine Progress Banner -->
+      <div class="routine-progress-card">
+        <div class="routine-progress-header">
+          <div>
+            <div id="routine-today-date" class="routine-progress-date">Today</div>
+            <div id="routine-progress-text" class="routine-progress-text">Loading habits...</div>
+          </div>
+          <div id="routine-progress-pct" class="routine-progress-pct">0%</div>
+        </div>
+        <div class="routine-progress-bar" role="progressbar" aria-label="Today's habit completion progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          <div id="routine-progress-fill" class="routine-progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Filter Bar: Time of Day -->
+      <div class="routine-filter-bar">
+        <div class="routine-time-filters" role="group" aria-label="Filter habits by time of day">
+          <button type="button" class="routine-time-btn active" data-time="all" aria-pressed="true">All</button>
+          <button type="button" class="routine-time-btn" data-time="morning" aria-pressed="false">🌅 Morning</button>
+          <button type="button" class="routine-time-btn" data-time="afternoon" aria-pressed="false">☀️ Afternoon</button>
+          <button type="button" class="routine-time-btn" data-time="evening" aria-pressed="false">🌙 Evening</button>
+        </div>
+        <span id="routine-count-badge" class="badge badge--primary">0 habits</span>
+      </div>
+
+      <!-- Habits List / Grid -->
+      <div id="routine-list"></div>
+
+      <!-- Add/Edit Habit Modal -->
+      <div id="routine-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="routine-modal-title">
+        <div class="modal">
+          <div class="modal__header">
+            <h2 id="routine-modal-title">Create New Habit</h2>
+            <button id="routine-modal-close" class="modal__close" aria-label="Close dialog">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <form id="routine-form" class="modal__body">
+            <div id="routine-error-msg" class="form-error" style="display: none;"></div>
+
+            <!-- Habit Title -->
+            <div class="form-group">
+              <label for="routine-title" class="label">Habit Name</label>
+              <input type="text" id="routine-title" class="input" placeholder="e.g. Read 20 pages, Morning meditation, Drink 2L water" maxlength="80" required>
+            </div>
+
+            <!-- Category -->
+            <div class="form-group">
+              <label for="routine-category" class="label">Category</label>
+              <select id="routine-category" class="input" required></select>
+            </div>
+
+            <!-- Time of Day -->
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="routine-time" class="label">Time of Day</label>
+              <select id="routine-time" class="input"></select>
+            </div>
+
+            <div class="modal__footer" style="margin-top: var(--space-5);">
+              <button type="button" id="routine-modal-cancel" class="btn btn--secondary">Cancel</button>
+              <button type="submit" id="routine-modal-submit" class="btn btn--primary">Save Habit</button>
+            </div>
+          </form>
+        </div>
       </div>
     </section>
   </main>

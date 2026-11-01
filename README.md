@@ -29,7 +29,8 @@ Orbit/
 │   ├── layout.css          Sidebar, main grid, responsive
 │   ├── components.css      Buttons, cards, inputs, empty states
 │   ├── notes.css           Notes workspace, tree, context menu, modals
-│   └── expenses.css        Expense tracker layout, metrics, filters, modal
+│   ├── expenses.css        Expense tracker layout, metrics, filters, modal
+│   └── routines.css        Routine tracker layout, progress bar, streaks
 ├── js/
 │   ├── app.js              Entry point — initialises all modules
 │   ├── storage.js          Safe localStorage wrapper
@@ -37,7 +38,8 @@ Orbit/
 │   ├── notesStore.js       Notes & folders data model + CRUD
 │   ├── notesTree.js        Folder tree UI, DND, context menu, breadcrumbs
 │   ├── notesEditor.js      Markdown editor, toolbar, autosave, preview
-│   └── expenses.js         Expense & income tracker, filters, totals, CRUD
+│   ├── expenses.js         Expense & income tracker, filters, totals, CRUD
+│   └── routines.js         Habits & routines tracker, streaks, daily progress
 ├── assets/                 (reserved for future static assets)
 └── README.md
 ```
@@ -55,6 +57,7 @@ Orbit/
 - **Step 2A** — Notes data model & folder tree: nested folders, drag & drop, context menu, modal move, inline rename, breadcrumbs, search, keyboard navigation.
 - **Step 2B** — Markdown note editor: formatting toolbar, Edit/Split/Preview view modes, 500ms debounced autosave, interactive preview checklist, keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+S, Tab), copy, and .md export.
 - **Step 3** — Expense tracker: income & expense transactions, category presets, date/period filters, live search, financial metric totals, and modal dialog.
+- **#4** — Routine tracker: daily habits, time-of-day filters, progress indicator, consecutive streak counting, 7-day visual strip, and modal dialog.
 
 ## License
 

@@ -624,3 +624,4 @@ export function initExpenses() {
   // 7. Initial render
   renderExpenses();
 }
+
