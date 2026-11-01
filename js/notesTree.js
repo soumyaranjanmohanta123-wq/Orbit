@@ -623,7 +623,7 @@ function showMoveModal(itemId) {
 
   // Build modal
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
+  overlay.className = 'modal-overlay visible';
 
   const modal = document.createElement('div');
   modal.className = 'modal';

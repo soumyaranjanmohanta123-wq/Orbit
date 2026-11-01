@@ -470,6 +470,8 @@ export function closeModal() {
   if (modalOverlay) {
     modalOverlay.classList.remove('visible');
   }
+  const errorMsg = document.getElementById('expense-error-msg');
+  if (errorMsg) errorMsg.style.display = 'none';
   editingTransactionId = null;
 }
 

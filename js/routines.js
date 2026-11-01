@@ -560,6 +560,8 @@ export function closeModal() {
   if (modalOverlay) {
     modalOverlay.classList.remove('visible');
   }
+  const errorMsg = document.getElementById('routine-error-msg');
+  if (errorMsg) errorMsg.style.display = 'none';
   editingRoutineId = null;
 }
 
