@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/notes.css">
   <link rel="stylesheet" href="css/expenses.css">
   <link rel="stylesheet" href="css/routines.css">
+  <link rel="stylesheet" href="css/dashboard.css">
 
   <!-- Markdown parser & XSS sanitizer (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -165,21 +166,118 @@
 
     <!-- ===== Dashboard ===== -->
     <section id="view-dashboard" class="view active" role="main" aria-label="Dashboard">
-      <div class="view__header">
-        <h1>Dashboard</h1>
-        <p>Your personal overview — at a glance.</p>
+      <!-- Greeting & Quick Actions Header -->
+      <div class="dashboard-header">
+        <div>
+          <h1 id="dashboard-greeting" class="dashboard-greeting-title">Good day!</h1>
+          <div id="dashboard-date" class="dashboard-date-subtitle">Loading date...</div>
+        </div>
+        <div class="dashboard-quick-actions">
+          <button id="dash-action-new-note" class="btn btn--secondary btn--sm" title="Create a new note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
+            <span>+ Note</span>
+          </button>
+          <button id="dash-action-add-expense" class="btn btn--secondary btn--sm" title="Record an expense or income">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+              <rect x="2" y="6" width="20" height="14" rx="2"/>
+              <path d="M2 10h20"/>
+              <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+            <span>+ Expense</span>
+          </button>
+          <button id="dash-action-add-habit" class="btn btn--secondary btn--sm" title="Build a new habit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span>+ Habit</span>
+          </button>
+        </div>
       </div>
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-        </svg>
-        <p class="empty-state__title">Nothing here yet</p>
-        <p class="empty-state__description">
-          Your dashboard will show an overview once you start adding notes, tracking expenses, and building routines.
-        </p>
+
+      <!-- Dashboard Grid: Finances, Routines & Recent Notes -->
+      <div class="dashboard-grid">
+
+        <!-- 1. Month's Financial Summary Card -->
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <div class="dash-card__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="6" width="20" height="14" rx="2"/>
+                <path d="M2 10h20"/>
+                <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
+              </svg>
+              <span>This Month's Finances</span>
+            </div>
+            <a id="dash-link-expenses" class="dash-card__link">View all expenses →</a>
+          </div>
+
+          <div class="dash-finance-metrics">
+            <div class="dash-finance-metric">
+              <span class="dash-finance-label">Income</span>
+              <span id="dashboard-finance-income" class="dash-finance-val income">$0.00</span>
+            </div>
+            <div class="dash-finance-metric">
+              <span class="dash-finance-label">Expenses</span>
+              <span id="dashboard-finance-expenses" class="dash-finance-val">$0.00</span>
+            </div>
+            <div class="dash-finance-metric">
+              <span class="dash-finance-label">Balance</span>
+              <span id="dashboard-finance-balance" class="dash-finance-val">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Today's Routine Progress Card -->
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <div class="dash-card__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <span>Today's Routines</span>
+            </div>
+            <a id="dash-link-routines" class="dash-card__link">Manage routines →</a>
+          </div>
+
+          <!-- Progress Bar Box -->
+          <div class="dash-routine-progress-box">
+            <div class="dash-routine-progress-header">
+              <span id="dashboard-routine-label">0 of 0 habits completed</span>
+              <span id="dashboard-routine-pct" class="dash-routine-pct">0%</span>
+            </div>
+            <div class="routine-progress-bar" role="progressbar" aria-label="Today's routine progress">
+              <div id="dashboard-routine-fill" class="routine-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Quick Check-off Habit List -->
+          <div id="dashboard-routine-list" class="dash-habit-list"></div>
+        </div>
+
+        <!-- 3. Recently Edited Notes Card (Full Width) -->
+        <div class="dash-card dash-card--full">
+          <div class="dash-card__header">
+            <div class="dash-card__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>Recently Edited Notes</span>
+            </div>
+            <a id="dash-link-notes" class="dash-card__link">Open notes workspace →</a>
+          </div>
+
+          <div id="dashboard-recent-notes" class="dash-recent-notes-list"></div>
+        </div>
+
       </div>
     </section>
 
