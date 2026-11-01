@@ -85,9 +85,9 @@ function generateId() {
    Currency & Date Formatting Helpers
    ============================================================ */
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'INR',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
@@ -498,7 +498,7 @@ function handleFormSubmit(e) {
   // Validation
   if (isNaN(amount) || amount <= 0) {
     if (errorMsg) {
-      errorMsg.textContent = 'Please enter a valid amount greater than $0.00.';
+      errorMsg.textContent = 'Please enter a valid amount greater than ₹0.00.';
       errorMsg.style.display = 'block';
     }
     return;
