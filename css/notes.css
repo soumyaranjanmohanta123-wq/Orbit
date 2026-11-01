@@ -1,0 +1,735 @@
+/* ============================================================
+   notes.css — Notes workspace styles
+   
+   Three-pane layout with folder tree sidebar, breadcrumbs,
+   context menus, drag-and-drop feedback, modals, and
+   responsive mobile overrides.
+   ============================================================ */
+
+
+/* ============================================================
+   1. View override — edge-to-edge flex layout
+   ============================================================ */
+
+#view-notes.view.active {
+  display: flex;
+  padding: 0;
+  max-width: none;
+}
+
+
+/* ============================================================
+   2. Three-pane layout
+   ============================================================ */
+
+.notes-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* --- Left pane: sidebar with folder tree --- */
+.notes-sidebar {
+  width: 260px;
+  min-width: 180px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+  flex-shrink: 0;
+  resize: horizontal;
+}
+
+/* --- Right pane: editor / placeholder --- */
+.notes-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--color-bg);
+}
+
+
+/* ============================================================
+   3. Notes sidebar header
+   ============================================================ */
+
+.notes-sidebar__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Search input inside the sidebar header */
+.notes-sidebar__search {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.notes-sidebar__search::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.notes-sidebar__search:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  outline: none;
+}
+
+/* Action buttons row (New Note, New Folder) */
+.notes-sidebar__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.notes-sidebar__actions .btn {
+  flex: 1;
+}
+
+
+/* ============================================================
+   4. Folder tree
+   ============================================================ */
+
+.notes-tree-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.notes-tree {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-2);
+}
+
+/* --- Tree item (folder or note) --- */
+.tree-item {
+  /* No additional styling; acts as a structural wrapper */
+}
+
+/* The clickable / visible row */
+.tree-item__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast);
+}
+
+.tree-item__row:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Active / selected row */
+.tree-item__row.active {
+  background: var(--color-primary-light);
+}
+
+/* --- Expand / collapse toggle --- */
+.tree-item__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.tree-item__toggle:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-active);
+}
+
+.tree-item__toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Rotate chevron when expanded */
+.tree-item__toggle.expanded {
+  transform: rotate(90deg);
+}
+
+/* Hide toggle for leaf notes (preserves space for alignment) */
+.tree-item__toggle.hidden,
+.tree-item__toggle.invisible {
+  visibility: hidden;
+}
+
+/* --- Item icon (folder / file) --- */
+.tree-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.tree-item__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Folder icon gets a subtle tint when expanded */
+.tree-item__toggle.expanded ~ .tree-item__icon {
+  color: var(--color-primary);
+}
+
+/* --- Item name (text label) --- */
+.tree-item__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--leading-normal);
+}
+
+/* --- Three-dot actions button --- */
+.tree-item__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+/* Show on row hover */
+.tree-item__row:hover .tree-item__actions {
+  opacity: 1;
+}
+
+.tree-item__actions:hover {
+  background: var(--color-surface-active);
+  color: var(--color-text-primary);
+}
+
+.tree-item__actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Children container (nested items) --- */
+.tree-item__children {
+  padding-left: 20px;
+  display: none;              /* Hidden when collapsed */
+}
+
+/* Shown when the parent folder is expanded */
+.tree-item__children.expanded {
+  display: block;
+}
+
+
+/* ============================================================
+   5. Context menu
+   ============================================================ */
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.context-menu__item kbd {
+  margin-left: auto;
+}
+
+.context-menu__item:hover {
+  background: var(--color-surface-hover);
+}
+
+.context-menu__item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+/* Danger item (e.g. Delete) */
+.context-menu__item--danger {
+  color: var(--color-danger);
+}
+
+.context-menu__item--danger svg {
+  color: var(--color-danger);
+}
+
+.context-menu__item--danger:hover {
+  background: var(--color-danger-light);
+}
+
+/* Divider between menu groups */
+.context-menu__divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-1) 0;
+}
+
+
+/* ============================================================
+   6. Breadcrumbs
+   ============================================================ */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.breadcrumbs__item {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.breadcrumbs__item:hover {
+  text-decoration: underline;
+  color: var(--color-primary);
+}
+
+/* Separator character (›) */
+.breadcrumbs__separator {
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Current (last) breadcrumb */
+.breadcrumbs__current {
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  cursor: default;
+}
+
+.breadcrumbs__current:hover {
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+
+
+/* ============================================================
+   7. Drag and drop feedback
+   ============================================================ */
+
+/* Folder being dragged over */
+.tree-item__row.drag-over {
+  background: var(--color-primary-light);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
+}
+
+/* Item currently being dragged */
+.tree-item__row.dragging {
+  opacity: 0.5;
+}
+
+/* Drop indicator line */
+.drop-indicator {
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   8. Rename input (inline editing)
+   ============================================================ */
+
+.tree-item__rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 1px var(--space-1);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+
+/* ============================================================
+   9. Move dialog (modal)
+   ============================================================ */
+
+/* Full-screen overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal container */
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  width: 90%;
+  padding: var(--space-6);
+}
+
+/* Header: title + close button */
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.modal__header h2 {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.modal__close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.modal__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Body */
+.modal__body {
+  /* Content area; no special styles beyond spacing */
+}
+
+/* Footer: buttons row */
+.modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+/* Simplified tree view inside the modal for folder selection */
+.modal__tree {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  background: var(--color-bg);
+}
+
+
+/* ============================================================
+   10. Back button (mobile editor → tree navigation)
+   ============================================================ */
+
+.notes-back-btn {
+  display: none;              /* Shown only on mobile */
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.notes-back-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.notes-back-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+
+/* ============================================================
+   11. Touch-device overrides
+   ============================================================ */
+
+/* Always show the actions button on touch (no hover) */
+@media (hover: none) {
+  .tree-item__actions {
+    opacity: 1;
+  }
+}
+
+
+/* ============================================================
+   12. Responsive — Mobile (< 768px)
+   ============================================================ */
+
+@media (max-width: 767px) {
+  /* Single-column layout */
+  .notes-layout {
+    flex-direction: column;
+  }
+
+  /* Sidebar takes full width */
+  .notes-sidebar {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    resize: none;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Main pane takes full width */
+  .notes-main {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* By default show the tree, hide the editor */
+  .notes-layout .notes-main {
+    display: none;
+  }
+
+  /* When --show-editor modifier is active: hide tree, show editor */
+  .notes-layout--show-editor .notes-sidebar {
+    display: none;
+  }
+
+  .notes-layout--show-editor .notes-main {
+    display: flex;
+  }
+
+  /* Show back button on mobile */
+  .notes-back-btn {
+    display: inline-flex;
+  }
+}
+
+
+/* ============================================================
+   13. Search results
+   ============================================================ */
+
+#notes-search-results {
+  display: none;               /* Toggled by JS */
+  overflow-y: auto;
+  padding: var(--space-2);
+  flex: 1;
+}
+
+.search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.search-result:hover {
+  background: var(--color-surface-hover);
+}
+
+.search-result__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search-result__name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+}
+
+.search-result__path {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+  padding-left: calc(18px + var(--space-2));
+}
+
+.search-result__snippet {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+  padding-left: calc(18px + var(--space-2));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.search-result mark {
+  background: var(--color-warning-light);
+  color: var(--color-text-primary);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+
+/* ============================================================
+   14. Pin indicator
+   ============================================================ */
+
+.tree-item__pin {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.tree-item__pin svg {
+  width: 12px;
+  height: 12px;
+}
+
+
+/* ============================================================
+   15. Modal tree items (move-to dialog)
+   ============================================================ */
+
+.modal__tree-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  text-align: left;
+}
+
+.modal__tree-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.modal__tree-item.selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.modal__tree-item.current {
+  color: var(--color-text-tertiary);
+}
+
+.modal__tree-icon {
+  display: inline-flex;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.modal__tree-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Breadcrumb separator SVG sizing */
+.breadcrumbs__separator svg {
+  width: 12px;
+  height: 12px;
+}
+
+
+/* ============================================================
+   16. Notes main placeholder (before editor is built)
+   ============================================================ */
+
+.notes-main__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--space-8);
+}

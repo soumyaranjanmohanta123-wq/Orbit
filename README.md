@@ -27,11 +27,14 @@ Orbit/
 ├── css/
 │   ├── design-system.css   CSS variables, reset, typography
 │   ├── layout.css          Sidebar, main grid, responsive
-│   └── components.css      Buttons, cards, inputs, empty states
+│   ├── components.css      Buttons, cards, inputs, empty states
+│   └── notes.css           Notes workspace, tree, context menu, modals
 ├── js/
 │   ├── app.js              Entry point — initialises all modules
 │   ├── storage.js          Safe localStorage wrapper
-│   └── ui.js               Theme toggle, navigation, sidebar
+│   ├── ui.js               Theme toggle, navigation, sidebar
+│   ├── notesStore.js       Notes & folders data model + CRUD
+│   └── notesTree.js        Folder tree UI, DND, context menu, breadcrumbs
 ├── assets/                 (reserved for future static assets)
 └── README.md
 ```
@@ -46,6 +49,7 @@ Orbit/
 ## Build Log
 
 - **Step 1** — Project structure, design system, base layout, sidebar navigation, light/dark mode, responsive shell.
+- **Step 2A** — Notes data model & folder tree: nested folders, drag & drop, context menu, modal move, inline rename, breadcrumbs, search, keyboard navigation.
 
 ## License
 

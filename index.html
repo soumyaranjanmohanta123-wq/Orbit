@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/notes.css">
 
   <!-- Inline SVG favicon — a planet with an orbit ring -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cellipse cx='12' cy='12' rx='10' ry='4.5' transform='rotate(-30 12 12)'/%3E%3C/svg%3E">
@@ -176,23 +177,95 @@
       </div>
     </section>
 
-    <!-- ===== Notes ===== -->
+    <!-- ===== Notes Workspace ===== -->
     <section id="view-notes" class="view" role="main" aria-label="Notes workspace">
-      <div class="view__header">
-        <h1>Notes</h1>
-        <p>Organize your knowledge in folders and Markdown notes.</p>
-      </div>
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <p class="empty-state__title">No notes yet</p>
-        <p class="empty-state__description">
-          Create your first note or folder to get started. Your notes workspace will appear here.
-        </p>
+      <div class="notes-layout" id="notes-layout">
+
+        <!-- Left Pane: Folder & Note Tree Sidebar -->
+        <aside class="notes-sidebar" id="notes-sidebar" aria-label="Folder and note tree">
+          <div class="notes-sidebar__header">
+            <div class="notes-sidebar__actions">
+              <button id="notes-new-note-btn" class="btn btn--primary btn--sm" title="New Note (Ctrl+N)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="12" y1="11" x2="12" y2="17"/>
+                  <line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+                <span>New Note</span>
+              </button>
+              <button id="notes-new-folder-btn" class="btn btn--secondary btn--sm" title="New Folder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  <line x1="12" y1="11" x2="12" y2="17"/>
+                  <line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+                <span>New Folder</span>
+              </button>
+            </div>
+            <input type="search" id="notes-search-input" class="notes-sidebar__search" placeholder="Search notes..." aria-label="Search notes by title or content">
+          </div>
+
+          <!-- Live search results list (toggled when query is entered) -->
+          <div id="notes-search-results" class="scrollable" aria-label="Search results"></div>
+
+          <!-- Tree view -->
+          <div id="notes-tree-container" class="notes-tree-container">
+            <ul id="notes-tree" class="notes-tree" role="tree" aria-label="Notes and folders"></ul>
+          </div>
+        </aside>
+
+        <!-- Right Pane: Breadcrumbs + Main Content Area -->
+        <div class="notes-main" id="notes-main">
+          <!-- Top bar: mobile back button + breadcrumbs -->
+          <div style="display: flex; align-items: center; border-bottom: 1px solid var(--color-border); background: var(--color-surface); flex-shrink: 0;">
+            <button id="notes-back-btn" class="notes-back-btn" aria-label="Back to folders">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+              </svg>
+              <span>Back</span>
+            </button>
+            <nav id="notes-breadcrumbs" class="breadcrumbs" aria-label="Breadcrumb navigation" style="border-bottom: none; flex: 1;"></nav>
+          </div>
+
+          <!-- Content display for Step 2A (Editor will be connected in Step 2B) -->
+          <div id="notes-content-area" class="scrollable" style="flex: 1; display: flex; flex-direction: column;">
+            <!-- Empty state when no note is selected -->
+            <div id="notes-empty-state" class="empty-state" style="flex: 1; justify-content: center; margin: auto;">
+              <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <p class="empty-state__title">No note selected</p>
+              <p class="empty-state__description">
+                Select a note from the tree on the left, or create a new note or folder to get started.
+              </p>
+            </div>
+
+            <!-- Note selected placeholder -->
+            <div id="notes-selected-preview" style="display: none; padding: var(--space-8); max-width: 800px; margin: 0 auto; width: 100%;">
+              <div style="margin-bottom: var(--space-4);">
+                <h1 id="notes-preview-title" style="font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-text-primary);"></h1>
+              </div>
+              <div style="display: flex; gap: var(--space-4); color: var(--color-text-tertiary); font-size: var(--text-xs); margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3);">
+                <span id="notes-preview-updated"></span>
+                <span id="notes-preview-path"></span>
+              </div>
+              <div class="card" style="background: var(--color-surface); border: 1px dashed var(--color-border-strong); padding: var(--space-6); text-align: center;">
+                <p style="font-weight: var(--weight-medium); color: var(--color-text-primary); margin-bottom: var(--space-2);">
+                  Notes Data Model & Folder Tree Active (Step 2A)
+                </p>
+                <p style="font-size: var(--text-sm); color: var(--color-text-secondary); max-width: 520px; margin: 0 auto;">
+                  Folders and notes are synchronized with browser storage. You can create, rename, delete, nest, duplicate, and drag-and-drop items. The Markdown editor with toolbar and live preview arrives in <strong>Step 2B</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </section>
 
