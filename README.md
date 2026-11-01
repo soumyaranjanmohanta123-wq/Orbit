@@ -8,12 +8,12 @@ Orbit is a clean, modern, front-end personal life manager that unifies your note
 
 ## Features (v1)
 
-| Module | Core Capabilities |
-|---|---|
-| **Dashboard** | Personalized time-based greeting, monthly financial summary (income, expenses, net balance), today's habit completion progress with 1-click check-off, and recently edited notes with 1-click navigation. |
+| Module              | Core Capabilities                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**       | Personalized time-based greeting, monthly financial summary (income, expenses, net balance), today's habit completion progress with 1-click check-off, and recently edited notes with 1-click navigation.                                                                                                     |
 | **Notes Workspace** | Unlimited nested folders, breadcrumb navigation, drag-and-drop hierarchy management, context menus, full Markdown editor with formatting toolbar, Edit/Split/Preview view modes, 500ms debounced autosave, interactive preview task checklists, global search with match highlighting, and `.md` file export. |
-| **Expense Tracker** | Income & expense tracking with category presets, custom dates, notes, multi-criteria period filters (`This Month`, `Last Month`, `All Time`), type filters (`All`, `Income`, `Expense`), category filtering, debounced search, real-time totals, and modal dialogs. |
-| **Routine Tracker** | Daily habit builder, time-of-day filtering (`Morning`, `Afternoon`, `Evening`, `Anytime`), consecutive day streak counting (current & all-time best streaks), animated daily completion progress bar, interactive 7-day visual history mini-strip with backfill support, and modal dialogs. |
+| **Expense Tracker** | Income & expense tracking with category presets, custom dates, notes, multi-criteria period filters (`This Month`, `Last Month`, `All Time`), type filters (`All`, `Income`, `Expense`), category filtering, debounced search, real-time totals, and modal dialogs.                                           |
+| **Routine Tracker** | Daily habit builder, time-of-day filtering (`Morning`, `Afternoon`, `Evening`, `Anytime`), consecutive day streak counting (current & all-time best streaks), animated daily completion progress bar, interactive 7-day visual history mini-strip with backfill support, and modal dialogs.                   |
 
 ---
 
@@ -60,31 +60,34 @@ Orbit/
 ## Keyboard Shortcuts Reference
 
 ### Global Navigation
-| Shortcut | Action | Scope |
-|---|---|---|
+
+| Shortcut           | Action                                      | Scope           |
+| ------------------ | ------------------------------------------- | --------------- |
 | `Ctrl+N` / `Cmd+N` | Create a new note in current folder context | Notes Workspace |
-| `Escape` | Dismiss active modal or context menu | Global |
+| `Escape`           | Dismiss active modal or context menu        | Global          |
 
 ### Notes Tree Navigation
-| Shortcut | Action | Scope |
-|---|---|---|
-| `↑` / `↓` | Move selection between visible tree items | Folder Tree |
-| `→` | Expand folder or move into first child | Folder Tree |
-| `←` | Collapse folder or jump to parent folder | Folder Tree |
-| `Enter` | Select note or toggle folder open/closed | Folder Tree |
-| `F2` | Start inline renaming of selected item | Folder Tree |
-| `Delete` | Delete selected note or folder (with confirmation) | Folder Tree |
+
+| Shortcut  | Action                                             | Scope       |
+| --------- | -------------------------------------------------- | ----------- |
+| `↑` / `↓` | Move selection between visible tree items          | Folder Tree |
+| `→`       | Expand folder or move into first child             | Folder Tree |
+| `←`       | Collapse folder or jump to parent folder           | Folder Tree |
+| `Enter`   | Select note or toggle folder open/closed           | Folder Tree |
+| `F2`      | Start inline renaming of selected item             | Folder Tree |
+| `Delete`  | Delete selected note or folder (with confirmation) | Folder Tree |
 
 ### Markdown Editor
-| Shortcut | Action | Scope |
-|---|---|---|
-| `Ctrl+B` / `Cmd+B` | Bold text (`**text**`) | Note Editor |
-| `Ctrl+I` / `Cmd+I` | Italic text (`*text*`) | Note Editor |
-| `Ctrl+K` / `Cmd+K` | Insert Markdown link (`[text](url)`) | Note Editor |
-| `Ctrl+S` / `Cmd+S` | Force immediate save (bypasses debounce) | Note Editor |
-| `Tab` | Indent with 2 spaces (or indent selected lines) | Note Editor |
-| `Shift+Tab` | Unindent selected lines by 2 spaces | Note Editor |
-| `Enter` | Automatically continue task checklists, bullets, numbers | Note Editor |
+
+| Shortcut           | Action                                                   | Scope       |
+| ------------------ | -------------------------------------------------------- | ----------- |
+| `Ctrl+B` / `Cmd+B` | Bold text (`**text**`)                                   | Note Editor |
+| `Ctrl+I` / `Cmd+I` | Italic text (`*text*`)                                   | Note Editor |
+| `Ctrl+K` / `Cmd+K` | Insert Markdown link (`[text](url)`)                     | Note Editor |
+| `Ctrl+S` / `Cmd+S` | Force immediate save (bypasses debounce)                 | Note Editor |
+| `Tab`              | Indent with 2 spaces (or indent selected lines)          | Note Editor |
+| `Shift+Tab`        | Unindent selected lines by 2 spaces                      | Note Editor |
+| `Enter`            | Automatically continue task checklists, bullets, numbers | Note Editor |
 
 ---
 
@@ -109,9 +112,9 @@ Orbit/
 - **Step 2A** — Notes data model & folder tree: flat array storage, unlimited nesting, drag & drop, context menus, inline rename, breadcrumbs, search indexing, and keyboard navigation.
 - **Step 2B** — Markdown note editor: formatting toolbar, Edit/Split/Preview view modes, 500ms debounced autosave, interactive preview task checklists, keyboard shortcuts, word/char counts, copy, and `.md` export.
 - **Step 3** — Expense tracker: income & expense transactions, category presets, date/period filters, live search, financial metric totals, and modal dialog.
-- **#4** — Routine tracker: daily habits, time-of-day filters, progress indicator, consecutive streak counting, 7-day visual strip, and modal dialog.
-- **#5** — Dashboard: multi-module overview of monthly finances, today's habit progress with 1-click check-off, recent notes with instant jumping, time greeting, and quick action shortcuts.
-- **#6** — Final polish: eliminated all inline styles, added mobile horizontal scroll for formatting toolbar, verified high-contrast accessibility (AAA/AA), refined responsive breakpoints down to 360px, and updated documentation.
+- **Step 4** — Routine tracker: daily habits, time-of-day filters, progress indicator, consecutive streak counting, 7-day visual strip, and modal dialog.
+- **Step 5** — Dashboard: multi-module overview of monthly finances, today's habit progress with 1-click check-off, recent notes with instant jumping, time greeting, and quick action shortcuts.
+- **Step 6** — Final polish: eliminated all inline styles, added mobile horizontal scroll for formatting toolbar, verified high-contrast accessibility (AAA/AA), refined responsive breakpoints down to 360px, and updated documentation.
 
 ---
 
