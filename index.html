@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Orbit — A personal life manager. Keep your life in orbit.">
+  <title>Orbit</title>
+
+  <!-- Fonts: Inter for UI, JetBrains Mono for code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets (order matters: tokens → layout → components) -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <!-- Inline SVG favicon — a planet with an orbit ring -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cellipse cx='12' cy='12' rx='10' ry='4.5' transform='rotate(-30 12 12)'/%3E%3C/svg%3E">
+</head>
+<body>
+
+  <!-- ================================================================
+       SIDEBAR (desktop + tablet)
+       Fixed on the left. Contains logo, navigation links, and
+       a theme toggle. Collapses to icon-only on tablet or on click.
+       ================================================================ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo and collapse button -->
+    <div class="sidebar__header">
+      <a href="#dashboard" class="sidebar__logo" aria-label="Orbit — go to dashboard">
+        <!-- Orbit icon: planet with ring -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.5"/>
+          <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-30 12 12)"/>
+        </svg>
+        <span class="sidebar__logo-text">Orbit</span>
+      </a>
+      <button class="sidebar__collapse-btn" id="sidebar-collapse-btn"
+              aria-label="Collapse sidebar" title="Collapse sidebar">
+        <!-- Chevron left icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Main navigation -->
+    <nav class="sidebar__nav" aria-label="Main navigation">
+      <a href="#dashboard" class="nav-item active" data-view="dashboard">
+        <!-- Grid / dashboard icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span class="nav-item__label">Dashboard</span>
+      </a>
+
+      <a href="#notes" class="nav-item" data-view="notes">
+        <!-- File / notes icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span class="nav-item__label">Notes</span>
+      </a>
+
+      <a href="#expenses" class="nav-item" data-view="expenses">
+        <!-- Wallet icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="14" rx="2"/>
+          <path d="M2 10h20"/>
+          <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+        </svg>
+        <span class="nav-item__label">Expenses</span>
+      </a>
+
+      <a href="#routines" class="nav-item" data-view="routines">
+        <!-- Check circle / habits icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span class="nav-item__label">Routines</span>
+      </a>
+    </nav>
+
+    <!-- Footer: theme toggle -->
+    <div class="sidebar__footer">
+      <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <!-- Sun icon (shown in light mode) -->
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <!-- Moon icon (shown in dark mode) -->
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <span class="sidebar__collapse-label">Theme</span>
+      </button>
+    </div>
+  </aside>
+
+
+  <!-- ================================================================
+       MOBILE HEADER
+       Shown only on small screens (< 768px). Displays the logo
+       and a theme toggle since the sidebar is hidden.
+       ================================================================ -->
+  <header class="mobile-header" id="mobile-header">
+    <div class="mobile-header__logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.5"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-30 12 12)"/>
+      </svg>
+      <span>Orbit</span>
+    </div>
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </header>
+
+
+  <!-- ================================================================
+       MAIN CONTENT
+       Contains all four view panels. Only the one with class
+       "active" is visible at a time. Each view will be built out
+       in later steps; for now they show friendly empty states.
+       ================================================================ -->
+  <main class="main-content" id="main-content">
+
+    <!-- ===== Dashboard ===== -->
+    <section id="view-dashboard" class="view active" role="main" aria-label="Dashboard">
+      <div class="view__header">
+        <h1>Dashboard</h1>
+        <p>Your personal overview — at a glance.</p>
+      </div>
+      <div class="empty-state">
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <p class="empty-state__title">Nothing here yet</p>
+        <p class="empty-state__description">
+          Your dashboard will show an overview once you start adding notes, tracking expenses, and building routines.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Notes ===== -->
+    <section id="view-notes" class="view" role="main" aria-label="Notes workspace">
+      <div class="view__header">
+        <h1>Notes</h1>
+        <p>Organize your knowledge in folders and Markdown notes.</p>
+      </div>
+      <div class="empty-state">
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <p class="empty-state__title">No notes yet</p>
+        <p class="empty-state__description">
+          Create your first note or folder to get started. Your notes workspace will appear here.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Expenses ===== -->
+    <section id="view-expenses" class="view" role="main" aria-label="Expense tracker">
+      <div class="view__header">
+        <h1>Expenses</h1>
+        <p>Track your income and spending.</p>
+      </div>
+      <div class="empty-state">
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="14" rx="2"/>
+          <path d="M2 10h20"/>
+          <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+        </svg>
+        <p class="empty-state__title">No transactions yet</p>
+        <p class="empty-state__description">
+          Start tracking your income and expenses to see totals, categories, and monthly summaries.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Routines ===== -->
+    <section id="view-routines" class="view" role="main" aria-label="Routine tracker">
+      <div class="view__header">
+        <h1>Routines</h1>
+        <p>Build daily habits and track your streaks.</p>
+      </div>
+      <div class="empty-state">
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <p class="empty-state__title">No routines yet</p>
+        <p class="empty-state__description">
+          Add daily habits you want to build. Check them off each day and watch your streaks grow.
+        </p>
+      </div>
+    </section>
+  </main>
+
+
+  <!-- ================================================================
+       BOTTOM NAV (mobile)
+       Visible only on small screens, sits at the bottom of the
+       viewport like a native mobile tab bar.
+       ================================================================ -->
+  <nav class="bottom-nav" id="bottom-nav" aria-label="Main navigation">
+    <a href="#dashboard" class="bottom-nav__item active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="#notes" class="bottom-nav__item" data-view="notes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      <span>Notes</span>
+    </a>
+    <a href="#expenses" class="bottom-nav__item" data-view="expenses">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="14" rx="2"/>
+        <path d="M2 10h20"/>
+        <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+      </svg>
+      <span>Expenses</span>
+    </a>
+    <a href="#routines" class="bottom-nav__item" data-view="routines">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>Routines</span>
+    </a>
+  </nav>
+
+
+  <!-- Entry point — loads as an ES module so import/export works -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
+

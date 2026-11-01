@@ -1,2 +1,52 @@
 # Orbit
-Orbit is a front end personal life manager that brings your finances, notes, and daily routines into one clean interface. This is version one, built with a focus on simple, fast, everyday use. All your data is saved right in your browser, so there's no backend or database needed. Future versions will grow with more features and cloud support.
+
+> **Keep your life in orbit.**
+
+Orbit is a front-end personal life manager that brings your notes, finances, and daily routines into one clean interface. All data is saved in the browser using `localStorage` — no backend, no database, no login required.
+
+## Features (v1)
+
+| Module | Description |
+|---|---|
+| **Dashboard** | Monthly income/expense summary, today's routine progress, recently edited notes. |
+| **Notes Workspace** | Nested folders, Markdown editor with toolbar, split/preview modes, search, autosave. |
+| **Expense Tracker** | Add income & expenses with categories, filters, and monthly totals. |
+| **Routine Tracker** | Daily habits with check-off and streak counting. |
+
+## Tech Stack
+
+- Plain HTML, CSS, and vanilla JavaScript (ES modules)
+- [marked](https://github.com/markedjs/marked) (Markdown parsing) + [DOMPurify](https://github.com/cure53/DOMPurify) (XSS sanitization) via CDN
+- No frameworks, no build tools
+
+## Project Structure
+
+```
+Orbit/
+├── index.html              Main HTML document
+├── css/
+│   ├── design-system.css   CSS variables, reset, typography
+│   ├── layout.css          Sidebar, main grid, responsive
+│   └── components.css      Buttons, cards, inputs, empty states
+├── js/
+│   ├── app.js              Entry point — initialises all modules
+│   ├── storage.js          Safe localStorage wrapper
+│   └── ui.js               Theme toggle, navigation, sidebar
+├── assets/                 (reserved for future static assets)
+└── README.md
+```
+
+## Getting Started
+
+1. Clone the repository.
+2. Open `index.html` in any modern browser — no server needed.
+   - Or use a local dev server: `npx serve .` or the VS Code Live Server extension.
+3. Start exploring!
+
+## Build Log
+
+- **Step 1** — Project structure, design system, base layout, sidebar navigation, light/dark mode, responsive shell.
+
+## License
+
+MIT
