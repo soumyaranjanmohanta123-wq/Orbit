@@ -49,7 +49,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow-y: auto;
+  height: 100%;
+  overflow: hidden;
   background: var(--color-bg);
 }
 
@@ -946,6 +947,10 @@
 }
 .notes-editor.mode-preview .notes-editor__pane--preview {
   display: flex;
+}
+.notes-editor.mode-preview .notes-toolbar {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .notes-editor.mode-split .notes-editor__pane--edit {

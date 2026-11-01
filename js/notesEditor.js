@@ -46,13 +46,18 @@ let pinBtnEl = null;
  * Configure marked with GitHub-flavored markdown and line breaks.
  */
 function setupMarked() {
-  if (typeof window.marked !== 'undefined' && window.marked.setOptions) {
-    window.marked.setOptions({
-      gfm: true,
-      breaks: true,
-      headerIds: true,
-      mangle: false
-    });
+  if (typeof window.marked !== 'undefined') {
+    if (typeof window.marked.use === 'function') {
+      window.marked.use({
+        gfm: true,
+        breaks: true
+      });
+    } else if (window.marked.setOptions) {
+      window.marked.setOptions({
+        gfm: true,
+        breaks: true
+      });
+    }
   }
 }
 
@@ -161,8 +166,13 @@ export function openNote(note) {
   hasUnsavedChanges = false;
 
   // Show editor container, hide empty state
-  if (emptyStateEl) emptyStateEl.style.display = 'none';
-  if (editorContainerEl) editorContainerEl.style.display = 'flex';
+  if (emptyStateEl) {
+    emptyStateEl.style.display = 'none';
+  }
+  if (editorContainerEl) {
+    editorContainerEl.classList.remove('u-hidden');
+    editorContainerEl.style.display = 'flex';
+  }
 
   // Set note values
   if (titleInputEl) titleInputEl.value = note.name || '';
@@ -197,8 +207,12 @@ export function closeNote() {
   currentNoteId = null;
   hasUnsavedChanges = false;
 
-  if (emptyStateEl) emptyStateEl.style.display = 'flex';
-  if (editorContainerEl) editorContainerEl.style.display = 'none';
+  if (emptyStateEl) {
+    emptyStateEl.style.display = 'flex';
+  }
+  if (editorContainerEl) {
+    editorContainerEl.style.display = 'none';
+  }
 }
 
 /* ============================================================

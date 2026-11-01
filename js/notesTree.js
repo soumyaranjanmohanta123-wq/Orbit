@@ -130,7 +130,9 @@ export function renderTree() {
       <div class="empty-state" style="padding: var(--space-8) var(--space-4);">
         <p class="empty-state__title">No notes yet</p>
         <p class="empty-state__description">Create your first note or folder using the buttons above.</p>
+        <button type="button" id="notes-tree-empty-add-btn" class="btn btn--primary btn--sm" style="margin-top: var(--space-3);">+ New Note</button>
       </div>`;
+    document.getElementById('notes-tree-empty-add-btn')?.addEventListener('click', () => createNewNote());
     return;
   }
 
@@ -479,16 +481,28 @@ function handleContextMenu(e) {
 
 /** Create a new note inside the given parent (or root). */
 export function createNewNote(parentId = null) {
+  if (parentId) {
+    Store.expandFolder(parentId);
+  }
   const name = Store.getUniqueName('Untitled Note', parentId);
   const note = Store.createItem('note', name, parentId);
   renderTree();
   selectItem(note.id);
-  // Start rename immediately so the user can type a name
-  requestAnimationFrame(() => startRename(note.id));
+  // Focus editor title so user can immediately title and write their note
+  requestAnimationFrame(() => {
+    const titleInput = document.getElementById('notes-editor-title');
+    if (titleInput) {
+      titleInput.focus();
+      titleInput.select();
+    }
+  });
 }
 
 /** Create a new folder inside the given parent (or root). */
 export function createNewFolder(parentId = null) {
+  if (parentId) {
+    Store.expandFolder(parentId);
+  }
   const name = Store.getUniqueName('New Folder', parentId);
   const folder = Store.createItem('folder', name, parentId);
   renderTree();
@@ -1040,12 +1054,17 @@ export function initNotesTree() {
     }
   });
 
-  // Sidebar action buttons
+  // Sidebar & empty-state action buttons
   document.getElementById('notes-new-note-btn')
     ?.addEventListener('click', () => {
       // Create at root or inside the selected folder
       const parentId = getSelectedFolderContext();
       createNewNote(parentId);
+    });
+
+  document.getElementById('notes-empty-create-btn')
+    ?.addEventListener('click', () => {
+      createNewNote();
     });
 
   document.getElementById('notes-new-folder-btn')

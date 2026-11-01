@@ -17,6 +17,7 @@ import Storage from './storage.js';
 const STORAGE_KEY  = 'orbit-notes';
 const EXPANDED_KEY = 'orbit-notes-expanded';   // Set of expanded folder IDs
 const LAST_NOTE_KEY = 'orbit-notes-last-open';  // ID of last opened note
+const SEEDED_KEY    = 'orbit-notes-seeded';     // Whether starter data has been seeded
 
 /* ============================================================
    Internal state
@@ -32,15 +33,161 @@ let expandedFolders = new Set();
    Persistence helpers
    ============================================================ */
 
-/** Load items from localStorage into memory. */
+/** Load items from localStorage into memory (seeds welcome data on first run). */
 function load() {
-  items = Storage.get(STORAGE_KEY, []);
-  // Ensure every item has the expected shape (handles old/corrupt data)
-  items = items.filter(item =>
-    item && typeof item.id === 'string' && typeof item.type === 'string'
-  );
-  const saved = Storage.get(EXPANDED_KEY, []);
-  expandedFolders = new Set(Array.isArray(saved) ? saved : []);
+  const stored = Storage.get(STORAGE_KEY, null);
+  const alreadySeeded = Storage.get(SEEDED_KEY, false);
+
+  if ((stored === null || (Array.isArray(stored) && stored.length === 0)) && !alreadySeeded) {
+    items = getStarterNotes();
+    save();
+    Storage.set(SEEDED_KEY, true);
+    expandedFolders = new Set(['folder-dsa', 'folder-react']);
+    saveExpanded();
+    if (!Storage.get(LAST_NOTE_KEY, null)) {
+      setLastOpenedNoteId('note-welcome');
+    }
+  } else {
+    items = Array.isArray(stored) ? stored : [];
+    items = items.filter(item =>
+      item && typeof item.id === 'string' && typeof item.type === 'string'
+    );
+    const saved = Storage.get(EXPANDED_KEY, []);
+    expandedFolders = new Set(Array.isArray(saved) ? saved : []);
+  }
+}
+
+/** Generate starter folders and notes for a rich initial experience. */
+function getStarterNotes() {
+  const now = new Date().toISOString();
+  const dsaFolderId = 'folder-dsa';
+  const reactFolderId = 'folder-react';
+  const welcomeId = 'note-welcome';
+  const dsaNoteId = 'note-dsa-trees';
+  const reactNoteId = 'note-react-hooks';
+
+  return [
+    {
+      id: dsaFolderId,
+      type: 'folder',
+      name: 'DSA',
+      parentId: null,
+      content: '',
+      createdAt: now,
+      updatedAt: now,
+      sortOrder: 1,
+      pinned: false
+    },
+    {
+      id: dsaNoteId,
+      type: 'note',
+      name: 'Binary Trees & Traversals',
+      parentId: dsaFolderId,
+      content: `# Binary Trees & Traversals
+
+A quick revision guide for tree concepts in Data Structures & Algorithms.
+
+## Core Properties
+- Maximum nodes at level \`L\`: 2^L
+- Height of a balanced tree with N nodes: log2(N)
+
+## Traversal Checklist
+- [x] In-order: Left -> Root -> Right
+- [x] Pre-order: Root -> Left -> Right
+- [ ] Post-order: Left -> Right -> Root
+- [ ] Level-order traversal (BFS) using a Queue
+
+\`\`\`javascript
+function inOrder(root) {
+  if (!root) return;
+  inOrder(root.left);
+  console.log(root.val);
+  inOrder(root.right);
+}
+\`\`\`
+
+> "Practice makes permanence. Always check your base cases!"
+`,
+      createdAt: now,
+      updatedAt: now,
+      sortOrder: 1,
+      pinned: false
+    },
+    {
+      id: reactFolderId,
+      type: 'folder',
+      name: 'React',
+      parentId: null,
+      content: '',
+      createdAt: now,
+      updatedAt: now,
+      sortOrder: 2,
+      pinned: false
+    },
+    {
+      id: reactNoteId,
+      type: 'note',
+      name: 'Component Lifecycle & Hooks',
+      parentId: reactFolderId,
+      content: `# Component Lifecycle & Hooks
+
+Essential reference for building clean React applications.
+
+### 1. useState
+Manages reactive component state.
+
+### 2. useEffect
+Handles side effects: data fetching, subscriptions, DOM manipulation.
+
+\`\`\`jsx
+useEffect(() => {
+  const timer = setInterval(() => tick(), 1000);
+  return () => clearInterval(timer);
+}, []);
+\`\`\`
+
+### Golden Rules
+1. Only call hooks at the **top level** of functional components.
+2. Never call hooks inside loops, conditions, or nested functions.
+`,
+      createdAt: now,
+      updatedAt: now,
+      sortOrder: 1,
+      pinned: false
+    },
+    {
+      id: welcomeId,
+      type: 'note',
+      name: 'Welcome to Orbit',
+      parentId: null,
+      content: `# Welcome to Orbit 🚀
+
+**Orbit** is your personal life manager and Markdown notes workspace.
+
+### ✍️ Note Workspace Features
+- **Markdown formatting**: **Bold**, *italics*, ~~strikethrough~~, headings, lists, quotes, and code blocks.
+- **Split & Preview modes**: Toggle between **Edit**, **Split** (live preview), and **Preview** at the top.
+- **Interactive Checklists**: Click on any checkbox in the preview pane to tick it off!
+  - [x] Explore the note editor
+  - [ ] Create a new folder
+  - [ ] Add an income or expense in the Expense Tracker
+  - [ ] Check off a habit in Routines
+- **Autosave**: Everything is saved automatically to your browser with debouncing.
+- **Organization**: Drag & drop notes into folders, nest folders infinitely, and use the search bar to find anything.
+
+\`\`\`javascript
+// Keep your life in orbit!
+console.log("Welcome to your new workspace.");
+\`\`\`
+
+Enjoy capturing your thoughts and keeping your life in orbit!
+`,
+      createdAt: now,
+      updatedAt: now,
+      sortOrder: 3,
+      pinned: true
+    }
+  ];
 }
 
 /** Persist the current items array to localStorage. */

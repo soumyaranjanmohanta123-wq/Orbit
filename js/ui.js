@@ -37,11 +37,26 @@ function getPreferredTheme() {
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   Storage.set(THEME_KEY, theme);
+  updateThemeUI(theme);
 }
 
-/** Toggle between light and dark mode. */
+/** Update the visual label, icons, and ARIA state of all theme toggle buttons. */
+function updateThemeUI(theme) {
+  const isDark = theme === 'dark';
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.setAttribute('aria-checked', String(isDark));
+    btn.setAttribute('aria-label', isDark ? 'Switch to Day mode' : 'Switch to Night mode');
+    btn.title = isDark ? 'Switch to Day mode' : 'Switch to Night mode';
+    const label = btn.querySelector('.theme-toggle__label');
+    if (label) {
+      label.textContent = isDark ? 'Night Mode' : 'Day Mode';
+    }
+  });
+}
+
+/** Toggle between light (day) and dark (night) mode. */
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
   setTheme(current === 'dark' ? 'light' : 'dark');
 }
 
@@ -51,6 +66,15 @@ function toggleTheme() {
 
 /** Currently active view name. */
 let currentView = 'dashboard';
+
+/** Callbacks invoked whenever active view changes. */
+let viewChangeCallbacks = [];
+
+export function onViewChange(fn) {
+  if (typeof fn === 'function') {
+    viewChangeCallbacks.push(fn);
+  }
+}
 
 /**
  * Switch the visible view panel and update all nav highlights.
@@ -80,6 +104,11 @@ function navigateTo(viewName) {
   if (window.location.hash !== `#${viewName}`) {
     history.replaceState(null, '', `#${viewName}`);
   }
+
+  // Notify registered callbacks
+  viewChangeCallbacks.forEach(fn => {
+    try { fn(viewName); } catch (err) { console.error(err); }
+  });
 }
 
 /**
@@ -132,14 +161,34 @@ export function initUI() {
 
   // 3. Wire up theme toggle buttons (desktop + mobile)
   document.querySelectorAll('.theme-toggle').forEach(btn => {
-    btn.addEventListener('click', toggleTheme);
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleTheme();
+    });
   });
 
   // 4. Wire up sidebar collapse button
   document.getElementById('sidebar-collapse-btn')
-    ?.addEventListener('click', toggleSidebar);
+    ?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSidebar();
+    });
 
-  // 5. Wire up sidebar nav items (use event delegation on the nav container)
+  // 5. Wire up logo to dashboard
+  document.querySelector('.sidebar__logo')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('dashboard');
+  });
+
+  // 6. Wire up sidebar nav items (direct + delegated)
+  document.querySelectorAll('.sidebar .nav-item').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = link.dataset.view;
+      if (view) navigateTo(view);
+    });
+  });
+
   document.querySelector('.sidebar__nav')?.addEventListener('click', (e) => {
     const item = e.target.closest('.nav-item');
     if (item?.dataset.view) {
@@ -148,7 +197,7 @@ export function initUI() {
     }
   });
 
-  // 6. Wire up bottom nav items
+  // 7. Wire up bottom nav items
   document.querySelector('.bottom-nav')?.addEventListener('click', (e) => {
     const item = e.target.closest('.bottom-nav__item');
     if (item?.dataset.view) {
@@ -157,10 +206,10 @@ export function initUI() {
     }
   });
 
-  // 7. Listen for hash changes (e.g. browser back/forward buttons)
+  // 8. Listen for hash changes (e.g. browser back/forward buttons)
   window.addEventListener('hashchange', () => navigateTo(getViewFromHash()));
 
-  // 8. Navigate to the initial view
+  // 9. Navigate to the initial view
   navigateTo(getViewFromHash());
 }
 
