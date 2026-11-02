@@ -664,25 +664,78 @@
               </div>
             </div>
 
-            <!-- Amount Input with Currency Prefix -->
-            <div class="form-group">
-              <label for="expense-amount" class="label">Amount (₹)</label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix">₹</span>
-                <input type="number" id="expense-amount" class="input input--has-prefix" placeholder="0.00" step="0.01" min="0.01" required>
+            <!-- Amount & Category Row -->
+            <div class="form-row form-row--2col">
+              <!-- Amount Input with Currency Prefix -->
+              <div class="form-group">
+                <label for="expense-amount" class="label">Amount (₹)</label>
+                <div class="input-prefix-wrapper">
+                  <span class="input-prefix">₹</span>
+                  <input type="number" id="expense-amount" class="input input--has-prefix" placeholder="0.00" step="0.01" min="0.01" required>
+                </div>
+              </div>
+
+              <!-- Category Select -->
+              <div class="form-group">
+                <label for="expense-category" class="label">Category</label>
+                <select id="expense-category" class="input" required></select>
               </div>
             </div>
 
-            <!-- Category Select -->
+            <!-- Date & Calendar Section -->
             <div class="form-group">
-              <label for="expense-category" class="label">Category</label>
-              <select id="expense-category" class="input" required></select>
-            </div>
+              <div class="expense-calendar-header-row">
+                <label for="expense-date" class="label">Date</label>
+                <div class="expense-calendar-presets">
+                  <button type="button" class="calendar-preset-btn" data-preset="today">Today</button>
+                  <button type="button" class="calendar-preset-btn" data-preset="yesterday">Yesterday</button>
+                </div>
+              </div>
 
-            <!-- Date Input -->
-            <div class="form-group">
-              <label for="expense-date" class="label">Date</label>
-              <input type="date" id="expense-date" class="input" required>
+              <!-- Interactive Calendar Widget -->
+              <div class="expense-calendar" id="expense-calendar" role="group" aria-label="Transaction Date Calendar">
+                <div class="expense-calendar__header">
+                  <button type="button" class="calendar-nav-btn" id="expense-cal-prev" aria-label="Previous month" title="Previous month">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                  <div class="expense-calendar__selectors">
+                    <select id="expense-cal-month-select" class="calendar-header-select" aria-label="Select month"></select>
+                    <select id="expense-cal-year-select" class="calendar-header-select" aria-label="Select year"></select>
+                  </div>
+                  <button type="button" class="calendar-nav-btn" id="expense-cal-next" aria-label="Next month" title="Next month">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="expense-calendar__weekdays" aria-hidden="true">
+                  <span>Su</span>
+                  <span>Mo</span>
+                  <span>Tu</span>
+                  <span>We</span>
+                  <span>Th</span>
+                  <span>Fr</span>
+                  <span>Sa</span>
+                </div>
+
+                <div class="expense-calendar__grid" id="expense-cal-grid" role="grid" aria-label="Calendar days"></div>
+
+                <div class="expense-calendar__selected-bar">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span class="expense-calendar__selected-text" id="expense-cal-selected-display"></span>
+                </div>
+              </div>
+
+              <!-- Underlying synchronized date input -->
+              <input type="hidden" id="expense-date" name="expense-date" required>
             </div>
 
             <!-- Note / Description Input -->

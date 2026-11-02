@@ -414,6 +414,256 @@ function escapeHtml(str) {
 }
 
 /* ============================================================
+   Calendar Component (Transaction Modal)
+   ============================================================ */
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+let calViewYear = new Date().getFullYear();
+let calViewMonth = new Date().getMonth(); // 0-11
+let calSelectedDate = getTodayDateString();
+
+function getYesterdayDateString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function populateYearSelect(centerYear) {
+  const yearSelect = document.getElementById('expense-cal-year-select');
+  if (!yearSelect) return;
+  const startYear = centerYear - 5;
+  const endYear = centerYear + 2;
+  const options = [];
+  for (let y = startYear; y <= endYear; y++) {
+    options.push(`<option value="${y}">${y}</option>`);
+  }
+  yearSelect.innerHTML = options.join('');
+}
+
+function ensureYearOption(year) {
+  const yearSelect = document.getElementById('expense-cal-year-select');
+  if (!yearSelect) return;
+  let exists = false;
+  for (let i = 0; i < yearSelect.options.length; i++) {
+    if (parseInt(yearSelect.options[i].value, 10) === year) {
+      exists = true;
+      break;
+    }
+  }
+  if (!exists) {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year;
+    if (yearSelect.options.length > 0 && year < parseInt(yearSelect.options[0].value, 10)) {
+      yearSelect.insertBefore(opt, yearSelect.firstChild);
+    } else {
+      yearSelect.appendChild(opt);
+    }
+  }
+  yearSelect.value = year;
+}
+
+function updateCalendarSelectedDisplay(dateStr) {
+  const displayEl = document.getElementById('expense-cal-selected-display');
+  if (!displayEl) return;
+  if (!dateStr) {
+    displayEl.textContent = 'No date selected';
+    return;
+  }
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const formatted = dateObj.toLocaleDateString('en-IN', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+  displayEl.textContent = formatted;
+}
+
+function renderCalendarGrid() {
+  const monthSelect = document.getElementById('expense-cal-month-select');
+  const yearSelect = document.getElementById('expense-cal-year-select');
+  const gridEl = document.getElementById('expense-cal-grid');
+
+  if (monthSelect) monthSelect.value = calViewMonth;
+  if (yearSelect) yearSelect.value = calViewYear;
+  if (!gridEl) return;
+
+  const todayStr = getTodayDateString();
+
+  // First day of viewed month (0 = Sun, 6 = Sat)
+  const firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
+  // Total days in viewed month
+  const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  // Total days in previous month
+  const daysInPrevMonth = new Date(calViewYear, calViewMonth, 0).getDate();
+
+  let html = '';
+
+  // Trailing days from previous month
+  const prevYear = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
+  const prevMonth = calViewMonth === 0 ? 12 : calViewMonth; // 1-indexed
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrevMonth - i;
+    const dateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isSelected = dateStr === calSelectedDate;
+    const isToday = dateStr === todayStr;
+    html += `
+      <button type="button" class="calendar-day-btn is-outside${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}"
+              data-date="${dateStr}" aria-label="${dateStr}" ${isSelected ? 'aria-selected="true"' : ''}>
+        ${d}
+      </button>
+    `;
+  }
+
+  // Days in current month
+  const currMonth = calViewMonth + 1; // 1-indexed
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calViewYear}-${String(currMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isSelected = dateStr === calSelectedDate;
+    const isToday = dateStr === todayStr;
+    html += `
+      <button type="button" class="calendar-day-btn${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}"
+              data-date="${dateStr}" aria-label="${dateStr}" ${isSelected ? 'aria-selected="true"' : ''}>
+        ${d}
+      </button>
+    `;
+  }
+
+  // Leading days from next month to complete row
+  const totalCells = firstDay + daysInMonth;
+  const remainingCells = (7 - (totalCells % 7)) % 7;
+  const nextYear = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
+  const nextMonth = calViewMonth === 11 ? 1 : calViewMonth + 2; // 1-indexed
+
+  for (let d = 1; d <= remainingCells; d++) {
+    const dateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isSelected = dateStr === calSelectedDate;
+    const isToday = dateStr === todayStr;
+    html += `
+      <button type="button" class="calendar-day-btn is-outside${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}"
+              data-date="${dateStr}" aria-label="${dateStr}" ${isSelected ? 'aria-selected="true"' : ''}>
+        ${d}
+      </button>
+    `;
+  }
+
+  gridEl.innerHTML = html;
+}
+
+export function setCalendarDate(dateStr) {
+  if (!dateStr) return;
+  calSelectedDate = dateStr;
+
+  const [yStr, mStr] = dateStr.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10) - 1; // 0-indexed
+
+  if (!isNaN(y) && !isNaN(m)) {
+    calViewYear = y;
+    calViewMonth = m;
+    ensureYearOption(y);
+  }
+
+  const dateInput = document.getElementById('expense-date');
+  if (dateInput) {
+    dateInput.value = dateStr;
+  }
+
+  updateCalendarSelectedDisplay(dateStr);
+  renderCalendarGrid();
+}
+
+function initCalendar() {
+  const monthSelect = document.getElementById('expense-cal-month-select');
+  const yearSelect = document.getElementById('expense-cal-year-select');
+  const prevBtn = document.getElementById('expense-cal-prev');
+  const nextBtn = document.getElementById('expense-cal-next');
+  const gridEl = document.getElementById('expense-cal-grid');
+
+  if (!monthSelect || !yearSelect || !gridEl) return;
+
+  // 1. Month options
+  monthSelect.innerHTML = MONTH_NAMES.map((m, idx) => `<option value="${idx}">${m}</option>`).join('');
+
+  // 2. Year options
+  const currentYear = new Date().getFullYear();
+  populateYearSelect(currentYear);
+
+  // 3. Navigation controls
+  prevBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (calViewMonth === 0) {
+      calViewMonth = 11;
+      calViewYear--;
+    } else {
+      calViewMonth--;
+    }
+    ensureYearOption(calViewYear);
+    renderCalendarGrid();
+  });
+
+  nextBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (calViewMonth === 11) {
+      calViewMonth = 0;
+      calViewYear++;
+    } else {
+      calViewMonth++;
+    }
+    ensureYearOption(calViewYear);
+    renderCalendarGrid();
+  });
+
+  // 4. Dropdowns
+  monthSelect.addEventListener('change', (e) => {
+    calViewMonth = parseInt(e.target.value, 10);
+    renderCalendarGrid();
+  });
+
+  yearSelect.addEventListener('change', (e) => {
+    calViewYear = parseInt(e.target.value, 10);
+    renderCalendarGrid();
+  });
+
+  // 5. Preset buttons (Today / Yesterday)
+  document.querySelectorAll('.calendar-preset-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const preset = e.currentTarget.getAttribute('data-preset');
+      if (preset === 'today') {
+        setCalendarDate(getTodayDateString());
+      } else if (preset === 'yesterday') {
+        setCalendarDate(getYesterdayDateString());
+      }
+    });
+  });
+
+  // 6. Grid day selection delegation
+  gridEl.addEventListener('click', (e) => {
+    const dayBtn = e.target.closest('.calendar-day-btn');
+    if (!dayBtn) return;
+    e.preventDefault();
+    const dateStr = dayBtn.getAttribute('data-date');
+    if (dateStr) {
+      setCalendarDate(dateStr);
+    }
+  });
+
+  // Initial render
+  setCalendarDate(getTodayDateString());
+}
+
+/* ============================================================
    Transaction Modal (Add / Edit)
    ============================================================ */
 
@@ -449,7 +699,7 @@ export function openModal(transactionId = null) {
     populateCategories(t.type);
     amountInput.value = t.amount;
     categorySelect.value = t.category;
-    dateInput.value = t.date;
+    setCalendarDate(t.date);
     noteInput.value = t.note || '';
   } else {
     // Add Mode
@@ -457,7 +707,7 @@ export function openModal(transactionId = null) {
     typeExpenseRadio.checked = true;
     populateCategories('expense');
     amountInput.value = '';
-    dateInput.value = getTodayDateString();
+    setCalendarDate(getTodayDateString());
     noteInput.value = '';
   }
 
@@ -566,7 +816,10 @@ export function initExpenses() {
   populateCategories('expense');
   populateFilterCategories();
 
-  // 2. Add Transaction Button
+  // 2. Initialize modal calendar widget
+  initCalendar();
+
+  // 3. Add Transaction Button
   document.getElementById('expense-add-btn')?.addEventListener('click', () => openModal());
 
   // 3. Modal close and cancel buttons
