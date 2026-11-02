@@ -291,6 +291,8 @@ export function renderExpenses() {
   // 2. Render Transactions List
   const listEl = document.getElementById('expense-list');
   const countBadgeEl = document.getElementById('expense-count-badge');
+  const toggleAllBtn = document.getElementById('expense-toggle-all-btn');
+
   if (countBadgeEl) {
     countBadgeEl.textContent = `${filtered.length} transaction${filtered.length === 1 ? '' : 's'}`;
   }
@@ -298,6 +300,7 @@ export function renderExpenses() {
   if (!listEl) return;
 
   if (filtered.length === 0) {
+    if (toggleAllBtn) toggleAllBtn.style.display = 'none';
     listEl.innerHTML = `
       <div class="empty-state" style="padding: var(--space-12) var(--space-4);">
         <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -322,37 +325,91 @@ export function renderExpenses() {
     return;
   }
 
-  // Render transaction cards / table
+  // Group transactions by date
+  const groupsByDate = new Map();
+  filtered.forEach(t => {
+    if (!groupsByDate.has(t.date)) {
+      groupsByDate.set(t.date, []);
+    }
+    groupsByDate.get(t.date).push(t);
+  });
+
+  const sortedDates = [...groupsByDate.keys()].sort((a, b) => b.localeCompare(a));
+
+  // Expand the first date by default on initial load
+  if (!hasInitializedExpandedDates && sortedDates.length > 0) {
+    expandedDates.add(sortedDates[0]);
+    hasInitializedExpandedDates = true;
+  }
+
+  // Update Expand All / Collapse All button
+  if (toggleAllBtn) {
+    toggleAllBtn.style.display = 'inline-flex';
+    const allExpanded = sortedDates.length > 0 && sortedDates.every(d => expandedDates.has(d));
+    toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    toggleAllBtn.onclick = () => {
+      if (allExpanded) {
+        expandedDates.clear();
+      } else {
+        sortedDates.forEach(d => expandedDates.add(d));
+      }
+      renderExpenses();
+    };
+  }
+
+  // Render day groups
   listEl.innerHTML = `
-    <div class="transaction-table-wrapper">
-      <table class="transaction-table" aria-label="Transactions">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Category</th>
-            <th>Note</th>
-            <th style="text-align: right;">Amount</th>
-            <th style="text-align: right; width: 80px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filtered.map(t => renderTransactionRow(t)).join('')}
-        </tbody>
-      </table>
+    <div class="expense-day-groups" role="region" aria-label="Transactions grouped by date">
+      ${sortedDates.map(d => renderDayGroup(d, groupsByDate.get(d))).join('')}
     </div>
   `;
 
-  // Attach event handlers for edit and delete buttons
+  // Attach event handlers
+  // Day header toggle (click & keyboard)
+  listEl.querySelectorAll('[data-action="toggle-day"]').forEach(header => {
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const dateStr = header.dataset.date;
+      if (expandedDates.has(dateStr)) {
+        expandedDates.delete(dateStr);
+      } else {
+        expandedDates.add(dateStr);
+      }
+      renderExpenses();
+    });
+
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        header.click();
+      }
+    });
+  });
+
+  // Quick "+ Add" to specific date
+  listEl.querySelectorAll('[data-action="quick-add-date"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dateStr = btn.dataset.date;
+      openModal();
+      setCalendarDate(dateStr);
+      document.getElementById('expense-amount')?.focus();
+    });
+  });
+
+  // Edit transaction
   listEl.querySelectorAll('[data-action="edit"]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = btn.dataset.id;
       openModal(id);
     });
   });
 
+  // Delete transaction
   listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = btn.dataset.id;
       const t = getTransaction(id);
       if (!t) return;
@@ -365,7 +422,27 @@ export function renderExpenses() {
   });
 }
 
-function renderTransactionRow(t) {
+const expandedDates = new Set();
+let hasInitializedExpandedDates = false;
+
+function renderDayTotals(dayIncome, dayExpenses, dayNet) {
+  if (dayIncome > 0 && dayExpenses > 0) {
+    const netClass = dayNet >= 0 ? 'color: var(--color-success);' : 'color: var(--color-danger);';
+    const netSign = dayNet >= 0 ? '+' : '';
+    return `
+      <span class="day-total--income">+${formatCurrency(dayIncome)}</span>
+      <span class="day-total-sep">/</span>
+      <span class="day-total--expense">-${formatCurrency(dayExpenses)}</span>
+      <span class="day-net-label" style="${netClass}">(${netSign}${formatCurrency(dayNet)})</span>
+    `;
+  }
+  if (dayIncome > 0) {
+    return `<span class="day-total--income">Total: +${formatCurrency(dayIncome)}</span>`;
+  }
+  return `<span class="day-total--expense">Total: -${formatCurrency(dayExpenses)}</span>`;
+}
+
+function renderDayTransactionRow(t) {
   const isIncome = t.type === 'income';
   const amountClass = isIncome ? 'tx-amount--income' : 'tx-amount--expense';
   const sign = isIncome ? '+' : '-';
@@ -373,7 +450,6 @@ function renderTransactionRow(t) {
 
   return `
     <tr class="transaction-row" data-id="${t.id}">
-      <td class="tx-cell-date">${formatDate(t.date)}</td>
       <td>
         <span class="badge ${badgeClass}">${isIncome ? 'Income' : 'Expense'}</span>
       </td>
@@ -403,6 +479,70 @@ function renderTransactionRow(t) {
         </div>
       </td>
     </tr>
+  `;
+}
+
+function renderDayGroup(dateStr, txs) {
+  let dayIncome = 0;
+  let dayExpenses = 0;
+  txs.forEach(t => {
+    if (t.type === 'income') dayIncome += t.amount;
+    else dayExpenses += t.amount;
+  });
+  const dayNet = dayIncome - dayExpenses;
+  const isExpanded = expandedDates.has(dateStr);
+  const isToday = (dateStr === getTodayDateString());
+  const isYesterday = (dateStr === getYesterdayDateString());
+  const formattedDate = formatDate(dateStr);
+
+  return `
+    <div class="expense-day-group ${isExpanded ? 'is-expanded' : ''}" data-date="${dateStr}">
+      <div class="expense-day-header" data-action="toggle-day" data-date="${dateStr}" role="button" tabindex="0" aria-expanded="${isExpanded}">
+        <div class="expense-day-header__left">
+          <svg class="expense-day-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <div class="expense-day-title-wrap">
+            <span class="expense-day-date">${escapeHtml(formattedDate)}</span>
+            ${isToday ? '<span class="badge badge--primary day-badge">Today</span>' : ''}
+            ${isYesterday ? '<span class="badge badge--secondary day-badge">Yesterday</span>' : ''}
+          </div>
+          <span class="expense-day-count">${txs.length} item${txs.length === 1 ? '' : 's'}</span>
+        </div>
+
+        <div class="expense-day-header__right">
+          <div class="expense-day-totals">
+            ${renderDayTotals(dayIncome, dayExpenses, dayNet)}
+          </div>
+          <button type="button" class="btn btn--xs btn--secondary btn--day-add" data-action="quick-add-date" data-date="${dateStr}" title="Add another transaction on this day">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; margin-right: 3px;">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div class="expense-day-body ${isExpanded ? 'is-expanded' : ''}">
+        <div class="transaction-table-wrapper">
+          <table class="transaction-table transaction-table--day" aria-label="Transactions for ${escapeHtml(formattedDate)}">
+            <thead>
+              <tr>
+                <th style="width: 90px;">Type</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th style="text-align: right;">Amount</th>
+                <th style="text-align: right; width: 80px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${txs.map(t => renderDayTransactionRow(t)).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -659,8 +799,46 @@ function initCalendar() {
     }
   });
 
+  // 7. Toggle expand / collapse of calendar window
+  const toggleBtn = document.getElementById('expense-calendar-toggle-btn');
+  toggleBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleCalendarCollapse();
+  });
+
   // Initial render
   setCalendarDate(getTodayDateString());
+}
+
+function toggleCalendarCollapse(forceOpen = null) {
+  const wrapEl = document.getElementById('expense-calendar-wrap');
+  const toggleBtn = document.getElementById('expense-calendar-toggle-btn');
+  const labelEl = document.getElementById('expense-calendar-toggle-label');
+  const chevronEl = document.getElementById('expense-calendar-chevron');
+
+  if (!wrapEl) return;
+
+  const isCurrentlyOpen = wrapEl.style.display !== 'none';
+  const shouldOpen = forceOpen !== null ? forceOpen : !isCurrentlyOpen;
+
+  if (shouldOpen) {
+    wrapEl.style.display = 'block';
+    if (toggleBtn) {
+      toggleBtn.classList.add('is-active');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+    if (labelEl) labelEl.textContent = 'Hide Calendar';
+    if (chevronEl) chevronEl.style.transform = 'rotate(180deg)';
+    renderCalendarGrid();
+  } else {
+    wrapEl.style.display = 'none';
+    if (toggleBtn) {
+      toggleBtn.classList.remove('is-active');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (labelEl) labelEl.textContent = 'Change Date';
+    if (chevronEl) chevronEl.style.transform = 'rotate(0deg)';
+  }
 }
 
 /* ============================================================
@@ -679,13 +857,25 @@ export function openModal(transactionId = null) {
   const dateInput = document.getElementById('expense-date');
   const noteInput = document.getElementById('expense-note');
   const errorMsg = document.getElementById('expense-error-msg');
+  const successMsg = document.getElementById('expense-success-msg');
+  const addAnotherBtn = document.getElementById('expense-modal-add-another');
+  const inlineAddAnotherBtn = document.getElementById('expense-add-another-inline-btn');
 
   if (!modalOverlay || !form) return;
 
   if (errorMsg) errorMsg.style.display = 'none';
+  if (successMsg) {
+    successMsg.textContent = '';
+    successMsg.style.display = 'none';
+  }
+
+  // Minimize the calendar by default when opening the modal
+  toggleCalendarCollapse(false);
 
   if (transactionId) {
-    // Edit Mode
+    // Edit Mode: hide "Add Another" buttons
+    if (addAnotherBtn) addAnotherBtn.style.display = 'none';
+    if (inlineAddAnotherBtn) inlineAddAnotherBtn.style.display = 'none';
     const t = getTransaction(transactionId);
     if (!t) return;
 
@@ -702,7 +892,9 @@ export function openModal(transactionId = null) {
     setCalendarDate(t.date);
     noteInput.value = t.note || '';
   } else {
-    // Add Mode
+    // Add Mode: show "Add Another" buttons
+    if (addAnotherBtn) addAnotherBtn.style.display = 'inline-flex';
+    if (inlineAddAnotherBtn) inlineAddAnotherBtn.style.display = 'flex';
     if (modalTitle) modalTitle.textContent = 'Add Transaction';
     typeExpenseRadio.checked = true;
     populateCategories('expense');
@@ -722,6 +914,11 @@ export function closeModal() {
   }
   const errorMsg = document.getElementById('expense-error-msg');
   if (errorMsg) errorMsg.style.display = 'none';
+  const successMsg = document.getElementById('expense-success-msg');
+  if (successMsg) {
+    successMsg.textContent = '';
+    successMsg.style.display = 'none';
+  }
   editingTransactionId = null;
 }
 
@@ -768,7 +965,76 @@ function handleFormSubmit(e) {
     addTransaction({ type, amount, category, date, note });
   }
 
+  expandedDates.add(date);
   closeModal();
+}
+
+function handleSaveAndAddAnother(e) {
+  if (e) e.preventDefault();
+
+  const type = document.querySelector('input[name="expense-type"]:checked')?.value || 'expense';
+  const amountStr = document.getElementById('expense-amount')?.value;
+  const category = document.getElementById('expense-category')?.value;
+  const date = document.getElementById('expense-date')?.value;
+  const note = document.getElementById('expense-note')?.value;
+  const errorMsg = document.getElementById('expense-error-msg');
+  const successMsg = document.getElementById('expense-success-msg');
+  const amountInput = document.getElementById('expense-amount');
+  const noteInput = document.getElementById('expense-note');
+
+  const amount = parseFloat(amountStr);
+
+  // Validation
+  if (isNaN(amount) || amount <= 0) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please enter a valid amount greater than ₹0.00.';
+      errorMsg.style.display = 'block';
+    }
+    if (successMsg) successMsg.style.display = 'none';
+    return;
+  }
+
+  if (!date) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please select a valid date.';
+      errorMsg.style.display = 'block';
+    }
+    if (successMsg) successMsg.style.display = 'none';
+    return;
+  }
+
+  if (errorMsg) errorMsg.style.display = 'none';
+
+  // Add the transaction
+  addTransaction({ type, amount, category, date, note });
+
+  // Ensure this date is expanded in the list
+  expandedDates.add(date);
+
+  // Show inline success message
+  if (successMsg) {
+    const isIncome = type === 'income';
+    const sign = isIncome ? '+' : '-';
+    successMsg.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>Saved <strong>${sign}${formatCurrency(amount)}</strong> (${escapeHtml(category)}). Add another for <strong>${formatDate(date)}</strong> below:</span>
+    `;
+    successMsg.style.display = 'flex';
+  }
+
+  // Reset fields for the next transaction while preserving the selected date
+  if (amountInput) {
+    amountInput.value = '';
+    amountInput.focus();
+  }
+  if (noteInput) {
+    noteInput.value = '';
+  }
+
+  // Refresh view
+  renderExpenses();
 }
 
 /* ============================================================
@@ -848,6 +1114,8 @@ export function initExpenses() {
 
   // 5. Form submission
   document.getElementById('expense-form')?.addEventListener('submit', handleFormSubmit);
+  document.getElementById('expense-modal-add-another')?.addEventListener('click', handleSaveAndAddAnother);
+  document.getElementById('expense-add-another-inline-btn')?.addEventListener('click', handleSaveAndAddAnother);
 
   // 6. Filter Controls
   document.getElementById('expense-filter-period')?.addEventListener('change', (e) => {
