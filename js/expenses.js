@@ -81,6 +81,38 @@ function generateId() {
   return 'tx_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function generateItemId() {
+  return 'item_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/**
+ * Normalizer: extracts line items from a transaction.
+ * If legacy transaction without items array, treats it as a single-item transaction.
+ * @param {Object} t
+ * @returns {Array<Object>}
+ */
+export function getTransactionItems(t) {
+  if (Array.isArray(t.items) && t.items.length > 0) {
+    return t.items;
+  }
+  // Legacy single-item fallback
+  return [{
+    id: (t.id || 'tx') + '_item0',
+    name: t.note || t.category || 'Item',
+    amount: Number(t.amount) || 0,
+    category: t.category || (t.type === 'income' ? 'Other Income' : 'Other Expense')
+  }];
+}
+
+/**
+ * Helper to get a transaction title.
+ * @param {Object} t
+ * @returns {string}
+ */
+export function getTransactionTitle(t) {
+  return t.title || t.note || t.category || 'Transaction';
+}
+
 /* ============================================================
    Currency & Date Formatting Helpers
    ============================================================ */
@@ -134,14 +166,23 @@ export function getTransaction(id) {
   return transactions.find(t => t.id === id) || null;
 }
 
-export function addTransaction({ type, amount, category, date, note }) {
+export function addTransaction({ type, title, amount, category, date, note, items }) {
+  const transactionItems = Array.isArray(items) && items.length > 0 ? items : [];
+  const totalAmount = transactionItems.length > 0
+    ? transactionItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0)
+    : Math.abs(parseFloat(amount) || 0);
+
+  const mainCategory = category || (transactionItems.length === 1 ? transactionItems[0].category : 'Split');
+
   const transaction = {
     id: generateId(),
     type: type === 'income' ? 'income' : 'expense',
-    amount: Math.abs(parseFloat(amount) || 0),
-    category: (category || 'Other').trim(),
+    title: (title || '').trim() || (transactionItems[0]?.name || 'Transaction'),
+    amount: totalAmount,
+    category: mainCategory,
     date: date || getTodayDateString(),
     note: (note || '').trim(),
+    items: transactionItems,
     createdAt: new Date().toISOString()
   };
 
@@ -151,15 +192,24 @@ export function addTransaction({ type, amount, category, date, note }) {
   return transaction;
 }
 
-export function updateTransaction(id, { type, amount, category, date, note }) {
+export function updateTransaction(id, { type, title, amount, category, date, note, items }) {
   const item = transactions.find(t => t.id === id);
   if (!item) return false;
 
+  const transactionItems = Array.isArray(items) && items.length > 0 ? items : (item.items || []);
+  const totalAmount = transactionItems.length > 0
+    ? transactionItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0)
+    : Math.abs(parseFloat(amount) || 0);
+
+  const mainCategory = category || (transactionItems.length === 1 ? transactionItems[0].category : 'Split');
+
   item.type = type === 'income' ? 'income' : 'expense';
-  item.amount = Math.abs(parseFloat(amount) || 0);
-  item.category = (category || 'Other').trim();
+  item.title = (title || '').trim() || (transactionItems[0]?.name || item.title || 'Transaction');
+  item.amount = totalAmount;
+  item.category = mainCategory;
   item.date = date || getTodayDateString();
   item.note = (note || '').trim();
+  item.items = transactionItems;
   item.updatedAt = new Date().toISOString();
 
   save();
@@ -172,6 +222,7 @@ export function deleteTransaction(id) {
   if (idx === -1) return false;
 
   transactions.splice(idx, 1);
+  expandedTxIds.delete(id);
   save();
   renderExpenses();
   return true;
@@ -182,18 +233,28 @@ export function deleteTransaction(id) {
    ============================================================ */
 
 /**
- * Calculate financial totals (Income, Expense, Balance) for an array of transactions.
+ * Calculate financial totals (Income, Expense, Balance) for an array of transactions,
+ * counting each nested line item under its own category.
  * @param {Array<Object>} txList
+ * @param {string} [categoryFilter] Optional category filter
  */
-export function calculateTotals(txList) {
+export function calculateTotals(txList, categoryFilter = null) {
   let income = 0;
   let expenses = 0;
 
   for (const t of txList) {
-    if (t.type === 'income') {
-      income += Number(t.amount) || 0;
-    } else {
-      expenses += Number(t.amount) || 0;
+    const isIncome = t.type === 'income';
+    const items = getTransactionItems(t);
+    for (const item of items) {
+      if (categoryFilter && categoryFilter !== 'all' && item.category !== categoryFilter) {
+        continue;
+      }
+      const amt = Number(item.amount) || 0;
+      if (isIncome) {
+        income += amt;
+      } else {
+        expenses += amt;
+      }
     }
   }
 
@@ -246,17 +307,24 @@ function getFilteredTransactions() {
       if (t.type !== activeFilter.type) return false;
     }
 
-    // 3. Category filter
+    // 3. Category filter: check if any nested item matches the active category
     if (activeFilter.category !== 'all') {
-      if (t.category !== activeFilter.category) return false;
+      const items = getTransactionItems(t);
+      const hasCat = items.some(it => it.category === activeFilter.category);
+      if (!hasCat) return false;
     }
 
-    // 4. Text search (note or category)
+    // 4. Text search: check title, note, item names, and item categories
     if (activeFilter.searchQuery) {
       const q = activeFilter.searchQuery.toLowerCase();
+      const titleMatch = (t.title || '').toLowerCase().includes(q);
       const noteMatch = (t.note || '').toLowerCase().includes(q);
-      const catMatch = (t.category || '').toLowerCase().includes(q);
-      if (!noteMatch && !catMatch) return false;
+      const items = getTransactionItems(t);
+      const itemMatch = items.some(it =>
+        (it.name || '').toLowerCase().includes(q) ||
+        (it.category || '').toLowerCase().includes(q)
+      );
+      if (!titleMatch && !noteMatch && !itemMatch) return false;
     }
 
     return true;
@@ -269,7 +337,7 @@ function getFilteredTransactions() {
 
 export function renderExpenses() {
   const filtered = getFilteredTransactions();
-  const totals = calculateTotals(filtered);
+  const totals = calculateTotals(filtered, activeFilter.category);
 
   // 1. Render Summary Cards
   const incomeEl = document.getElementById('expense-stat-income');
@@ -288,7 +356,10 @@ export function renderExpenses() {
     }
   }
 
-  // 2. Render Transactions List
+  // 2. Render Category Breakdown
+  renderCategoryBreakdown(filtered);
+
+  // 3. Render Transactions List
   const listEl = document.getElementById('expense-list');
   const countBadgeEl = document.getElementById('expense-count-badge');
   const toggleAllBtn = document.getElementById('expense-toggle-all-btn');
@@ -380,8 +451,31 @@ export function renderExpenses() {
 
     header.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target.closest('button')) return;
         e.preventDefault();
         header.click();
+      }
+    });
+  });
+
+  // Main transaction row toggle (click & keyboard)
+  listEl.querySelectorAll('[data-action="toggle-tx"]').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const id = row.dataset.id;
+      if (expandedTxIds.has(id)) {
+        expandedTxIds.delete(id);
+      } else {
+        expandedTxIds.add(id);
+      }
+      renderExpenses();
+    });
+
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target.closest('button')) return;
+        e.preventDefault();
+        row.click();
       }
     });
   });
@@ -393,7 +487,7 @@ export function renderExpenses() {
       const dateStr = btn.dataset.date;
       openModal();
       setCalendarDate(dateStr);
-      document.getElementById('expense-amount')?.focus();
+      document.getElementById('expense-title')?.focus();
     });
   });
 
@@ -414,7 +508,7 @@ export function renderExpenses() {
       const t = getTransaction(id);
       if (!t) return;
 
-      const confirmMsg = `Delete ${t.type} "${t.category} (${formatCurrency(t.amount)})"?`;
+      const confirmMsg = `Delete ${t.type} "${getTransactionTitle(t)} (${formatCurrency(t.amount)})" and all its items?`;
       if (confirm(confirmMsg)) {
         deleteTransaction(id);
       }
@@ -424,6 +518,99 @@ export function renderExpenses() {
 
 const expandedDates = new Set();
 let hasInitializedExpandedDates = false;
+const expandedTxIds = new Set();
+
+/**
+ * Render Category Breakdown Card based on current filtered items.
+ * Each item is counted under its own category.
+ * @param {Array<Object>} txList
+ */
+function renderCategoryBreakdown(txList) {
+  const container = document.getElementById('expense-category-breakdown');
+  const badgeTotal = document.getElementById('expense-breakdown-total');
+  if (!container) return;
+
+  const categoryMap = new Map();
+  let totalExpenses = 0;
+
+  txList.forEach(t => {
+    if (t.type !== 'expense') return;
+    const items = getTransactionItems(t);
+    items.forEach(item => {
+      if (activeFilter.category !== 'all' && item.category !== activeFilter.category) {
+        return;
+      }
+      const cat = item.category || 'Other Expense';
+      const amt = Number(item.amount) || 0;
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + amt);
+      totalExpenses += amt;
+    });
+  });
+
+  if (badgeTotal) {
+    badgeTotal.textContent = `Expenses: ${formatCurrency(totalExpenses)}`;
+  }
+
+  if (totalExpenses === 0 || categoryMap.size === 0) {
+    container.innerHTML = `
+      <div class="category-breakdown-empty">
+        <p>No expense data to display for the selected period.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Sort categories descending by expense amount
+  const sortedCategories = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
+
+  container.innerHTML = `
+    <div class="category-bars-list">
+      ${sortedCategories.map(([cat, amt]) => {
+        const pct = totalExpenses > 0 ? ((amt / totalExpenses) * 100).toFixed(1) : 0;
+        return `
+          <div class="category-bar-item" data-category="${escapeHtml(cat)}" title="Click to filter by ${escapeHtml(cat)}" role="button" tabindex="0">
+            <div class="category-bar-header">
+              <div class="category-bar-name">
+                <span class="category-bar-dot"></span>
+                <span>${escapeHtml(cat)}</span>
+              </div>
+              <div class="category-bar-values">
+                <span class="category-bar-amt">${formatCurrency(amt)}</span>
+                <span class="category-bar-pct">(${pct}%)</span>
+              </div>
+            </div>
+            <div class="category-bar-track">
+              <div class="category-bar-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  // Clicking on category bar filters by that category
+  container.querySelectorAll('.category-bar-item').forEach(bar => {
+    const handleCategoryClick = () => {
+      const cat = bar.dataset.category;
+      if (activeFilter.category === cat) {
+        activeFilter.category = 'all';
+      } else {
+        activeFilter.category = cat;
+      }
+      const catSelect = document.getElementById('expense-filter-category');
+      if (catSelect) catSelect.value = activeFilter.category;
+      renderExpenses();
+    };
+
+    bar.addEventListener('click', handleCategoryClick);
+    bar.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCategoryClick();
+      }
+    });
+  });
+}
 
 function renderDayTotals(dayIncome, dayExpenses, dayNet) {
   if (dayIncome > 0 && dayExpenses > 0) {
@@ -442,43 +629,88 @@ function renderDayTotals(dayIncome, dayExpenses, dayNet) {
   return `<span class="day-total--expense">Total: -${formatCurrency(dayExpenses)}</span>`;
 }
 
-function renderDayTransactionRow(t) {
+function renderMainTransactionCard(t) {
   const isIncome = t.type === 'income';
   const amountClass = isIncome ? 'tx-amount--income' : 'tx-amount--expense';
   const sign = isIncome ? '+' : '-';
   const badgeClass = isIncome ? 'badge--success' : 'badge--primary';
+  const items = getTransactionItems(t);
+  const title = getTransactionTitle(t);
+  const isExpanded = expandedTxIds.has(t.id);
+
+  const isSingle = items.length === 1;
+  const countBadge = isSingle
+    ? `<span class="main-tx-category-badge">${escapeHtml(items[0].category || t.category || 'General')}</span>`
+    : `<span class="main-tx-item-badge">${items.length} items</span>`;
 
   return `
-    <tr class="transaction-row" data-id="${t.id}">
-      <td>
-        <span class="badge ${badgeClass}">${isIncome ? 'Income' : 'Expense'}</span>
-      </td>
-      <td class="tx-cell-category">
-        <span class="tx-category-name">${escapeHtml(t.category)}</span>
-      </td>
-      <td class="tx-cell-note">
-        ${t.note ? `<span class="tx-note-text" title="${escapeHtml(t.note)}">${escapeHtml(t.note)}</span>` : '<span class="tx-note-empty">—</span>'}
-      </td>
-      <td class="tx-cell-amount ${amountClass}" style="text-align: right;">
-        ${sign} ${formatCurrency(t.amount)}
-      </td>
-      <td class="tx-cell-actions" style="text-align: right;">
-        <div class="tx-action-btns">
-          <button class="btn btn--icon btn--sm" data-action="edit" data-id="${t.id}" title="Edit transaction" aria-label="Edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button class="btn btn--icon btn--sm tx-btn--delete" data-action="delete" data-id="${t.id}" title="Delete transaction" aria-label="Delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
+    <div class="main-tx-card ${isExpanded ? 'is-expanded' : ''}" data-tx-id="${t.id}">
+      <div class="main-tx-row" data-action="toggle-tx" data-id="${t.id}" role="button" tabindex="0" aria-expanded="${isExpanded}">
+        <div class="main-tx-left">
+          <svg class="main-tx-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span class="badge ${badgeClass}">${isIncome ? 'Income' : 'Expense'}</span>
+          <div class="main-tx-info">
+            <div class="main-tx-title-row">
+              <span class="main-tx-title">${escapeHtml(title)}</span>
+              ${countBadge}
+            </div>
+            ${t.note ? `<span class="main-tx-note" title="${escapeHtml(t.note)}">${escapeHtml(t.note)}</span>` : ''}
+          </div>
         </div>
-      </td>
-    </tr>
+
+        <div class="main-tx-right">
+          <span class="main-tx-amount ${amountClass}">
+            ${sign} ${formatCurrency(t.amount)}
+          </span>
+          <div class="tx-action-btns">
+            <button type="button" class="btn btn--icon btn--sm" data-action="edit" data-id="${t.id}" title="Edit transaction" aria-label="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button type="button" class="btn btn--icon btn--sm tx-btn--delete" data-action="delete" data-id="${t.id}" title="Delete transaction" aria-label="Delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expanded Items Breakdown -->
+      <div class="main-tx-breakdown" id="tx-breakdown-${t.id}">
+        <table class="tx-items-table" aria-label="Items for ${escapeHtml(title)}">
+          <thead>
+            <tr>
+              <th class="tx-item-num">#</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th style="text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((it, idx) => `
+              <tr>
+                <td class="tx-item-num">${idx + 1}</td>
+                <td class="tx-item-name">${escapeHtml(it.name || '—')}</td>
+                <td class="tx-item-cat"><span class="badge badge--neutral">${escapeHtml(it.category || 'Other')}</span></td>
+                <td class="tx-item-amt" style="text-align: right;">${formatCurrency(it.amount)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">Total (${items.length} ${items.length === 1 ? 'item' : 'items'})</td>
+              <td class="tx-items-footer-amt" style="text-align: right;">${formatCurrency(t.amount)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
   `;
 }
 
@@ -486,8 +718,8 @@ function renderDayGroup(dateStr, txs) {
   let dayIncome = 0;
   let dayExpenses = 0;
   txs.forEach(t => {
-    if (t.type === 'income') dayIncome += t.amount;
-    else dayExpenses += t.amount;
+    if (t.type === 'income') dayIncome += Number(t.amount) || 0;
+    else dayExpenses += Number(t.amount) || 0;
   });
   const dayNet = dayIncome - dayExpenses;
   const isExpanded = expandedDates.has(dateStr);
@@ -507,14 +739,14 @@ function renderDayGroup(dateStr, txs) {
             ${isToday ? '<span class="badge badge--primary day-badge">Today</span>' : ''}
             ${isYesterday ? '<span class="badge badge--secondary day-badge">Yesterday</span>' : ''}
           </div>
-          <span class="expense-day-count">${txs.length} item${txs.length === 1 ? '' : 's'}</span>
+          <span class="expense-day-count">${txs.length} transaction${txs.length === 1 ? '' : 's'}</span>
         </div>
 
         <div class="expense-day-header__right">
           <div class="expense-day-totals">
             ${renderDayTotals(dayIncome, dayExpenses, dayNet)}
           </div>
-          <button type="button" class="btn btn--xs btn--secondary btn--day-add" data-action="quick-add-date" data-date="${dateStr}" title="Add another transaction on this day">
+          <button type="button" class="btn btn--xs btn--secondary btn--day-add" data-action="quick-add-date" data-date="${dateStr}" title="Add transaction on this day">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; margin-right: 3px;">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -525,21 +757,8 @@ function renderDayGroup(dateStr, txs) {
       </div>
 
       <div class="expense-day-body ${isExpanded ? 'is-expanded' : ''}">
-        <div class="transaction-table-wrapper">
-          <table class="transaction-table transaction-table--day" aria-label="Transactions for ${escapeHtml(formattedDate)}">
-            <thead>
-              <tr>
-                <th style="width: 90px;">Type</th>
-                <th>Category</th>
-                <th>Note</th>
-                <th style="text-align: right;">Amount</th>
-                <th style="text-align: right; width: 80px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${txs.map(t => renderDayTransactionRow(t)).join('')}
-            </tbody>
-          </table>
+        <div class="main-tx-list" role="list">
+          ${txs.map(t => renderMainTransactionCard(t)).join('')}
         </div>
       </div>
     </div>
@@ -842,8 +1061,110 @@ function toggleCalendarCollapse(forceOpen = null) {
 }
 
 /* ============================================================
-   Transaction Modal (Add / Edit)
+   Transaction Modal & Dynamic Line Items (Split Transactions)
    ============================================================ */
+
+/**
+ * Append a new line item row to the modal's items container.
+ * @param {Object} [itemData] Optional prefilled data { id, name, amount, category }
+ * @returns {HTMLElement} The created item row element
+ */
+function addItemRow(itemData = null) {
+  const listEl = document.getElementById('expense-items-list');
+  if (!listEl) return null;
+
+  const currentType = document.querySelector('input[name="expense-type"]:checked')?.value || 'expense';
+  const categories = currentType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const row = document.createElement('div');
+  row.className = 'expense-item-row';
+  const itemId = itemData?.id || generateItemId();
+  row.dataset.itemId = itemId;
+
+  const itemName = itemData?.name || '';
+  const itemAmount = (itemData?.amount != null && itemData.amount !== '') ? itemData.amount : '';
+  const itemCategory = itemData?.category || categories[0];
+
+  row.innerHTML = `
+    <div class="expense-item-row__fields">
+      <input type="text" class="input input--sm expense-item-name" placeholder="Item name (e.g. Milk, Detergent)" value="${escapeHtml(itemName)}" maxlength="80">
+      <div class="expense-item-prefix-wrap">
+        <span class="expense-item-prefix">₹</span>
+        <input type="number" class="input input--sm expense-item-amount" placeholder="0.00" step="0.01" min="0.01" value="${itemAmount !== '' ? itemAmount : ''}" required>
+      </div>
+      <select class="input input--sm expense-item-category">
+        ${categories.map(cat => `<option value="${escapeHtml(cat)}" ${cat === itemCategory ? 'selected' : ''}>${escapeHtml(cat)}</option>`).join('')}
+      </select>
+    </div>
+    <button type="button" class="btn btn--icon btn--sm btn--remove-item" title="Remove item" aria-label="Remove item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+    </button>
+  `;
+
+  // Remove button handler
+  row.querySelector('.btn--remove-item').addEventListener('click', () => {
+    const allRows = listEl.querySelectorAll('.expense-item-row');
+    if (allRows.length > 1) {
+      row.remove();
+    } else {
+      // Clear fields if it's the last remaining row
+      const nameInput = row.querySelector('.expense-item-name');
+      const amtInput = row.querySelector('.expense-item-amount');
+      if (nameInput) nameInput.value = '';
+      if (amtInput) amtInput.value = '';
+    }
+    updateItemsTotal();
+  });
+
+  // Live total update as amounts are entered
+  row.querySelector('.expense-item-amount').addEventListener('input', updateItemsTotal);
+
+  listEl.appendChild(row);
+  updateItemsTotal();
+  return row;
+}
+
+/**
+ * Recalculate and update the live total displayed inside the modal.
+ */
+function updateItemsTotal() {
+  const listEl = document.getElementById('expense-items-list');
+  const totalDisplay = document.getElementById('expense-items-total');
+  if (!listEl || !totalDisplay) return;
+
+  let sum = 0;
+  listEl.querySelectorAll('.expense-item-amount').forEach(input => {
+    const val = parseFloat(input.value);
+    if (!isNaN(val) && val > 0) {
+      sum += val;
+    }
+  });
+
+  totalDisplay.textContent = formatCurrency(sum);
+}
+
+/**
+ * Synchronize category select dropdowns across all item rows when switching Expense vs Income.
+ * @param {'expense'|'income'} newType
+ */
+function updateItemRowCategories(newType) {
+  const listEl = document.getElementById('expense-items-list');
+  if (!listEl) return;
+
+  const categories = newType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  listEl.querySelectorAll('.expense-item-category').forEach(select => {
+    const currentVal = select.value;
+    select.innerHTML = categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+    if (categories.includes(currentVal)) {
+      select.value = currentVal;
+    } else {
+      select.value = categories[0];
+    }
+  });
+}
 
 export function openModal(transactionId = null) {
   editingTransactionId = transactionId;
@@ -852,14 +1173,11 @@ export function openModal(transactionId = null) {
   const form = document.getElementById('expense-form');
   const typeIncomeRadio = document.getElementById('expense-type-income');
   const typeExpenseRadio = document.getElementById('expense-type-expense');
-  const amountInput = document.getElementById('expense-amount');
-  const categorySelect = document.getElementById('expense-category');
-  const dateInput = document.getElementById('expense-date');
+  const titleInput = document.getElementById('expense-title');
   const noteInput = document.getElementById('expense-note');
+  const itemsListEl = document.getElementById('expense-items-list');
   const errorMsg = document.getElementById('expense-error-msg');
   const successMsg = document.getElementById('expense-success-msg');
-  const addAnotherBtn = document.getElementById('expense-modal-add-another');
-  const inlineAddAnotherBtn = document.getElementById('expense-add-another-inline-btn');
 
   if (!modalOverlay || !form) return;
 
@@ -872,10 +1190,10 @@ export function openModal(transactionId = null) {
   // Minimize the calendar by default when opening the modal
   toggleCalendarCollapse(false);
 
+  // Clear existing item rows
+  if (itemsListEl) itemsListEl.innerHTML = '';
+
   if (transactionId) {
-    // Edit Mode: hide "Add Another" buttons
-    if (addAnotherBtn) addAnotherBtn.style.display = 'none';
-    if (inlineAddAnotherBtn) inlineAddAnotherBtn.style.display = 'none';
     const t = getTransaction(transactionId);
     if (!t) return;
 
@@ -886,25 +1204,27 @@ export function openModal(transactionId = null) {
       typeExpenseRadio.checked = true;
     }
 
-    populateCategories(t.type);
-    amountInput.value = t.amount;
-    categorySelect.value = t.category;
+    if (titleInput) titleInput.value = getTransactionTitle(t);
     setCalendarDate(t.date);
-    noteInput.value = t.note || '';
+    if (noteInput) noteInput.value = t.note || '';
+
+    // Populate existing nested line items (or normalized legacy item)
+    const items = getTransactionItems(t);
+    items.forEach(it => addItemRow(it));
   } else {
-    // Add Mode: show "Add Another" buttons
-    if (addAnotherBtn) addAnotherBtn.style.display = 'inline-flex';
-    if (inlineAddAnotherBtn) inlineAddAnotherBtn.style.display = 'flex';
     if (modalTitle) modalTitle.textContent = 'Add Transaction';
     typeExpenseRadio.checked = true;
-    populateCategories('expense');
-    amountInput.value = '';
+    if (titleInput) titleInput.value = '';
     setCalendarDate(getTodayDateString());
-    noteInput.value = '';
+    if (noteInput) noteInput.value = '';
+
+    // Add 1 default empty item row
+    addItemRow();
   }
 
+  updateItemsTotal();
   modalOverlay.classList.add('visible');
-  amountInput.focus();
+  titleInput?.focus();
 }
 
 export function closeModal() {
@@ -922,119 +1242,110 @@ export function closeModal() {
   editingTransactionId = null;
 }
 
-function populateCategories(type) {
-  const select = document.getElementById('expense-category');
-  if (!select) return;
-
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-  select.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-}
-
 function handleFormSubmit(e) {
   e.preventDefault();
 
   const type = document.querySelector('input[name="expense-type"]:checked')?.value || 'expense';
-  const amountStr = document.getElementById('expense-amount')?.value;
-  const category = document.getElementById('expense-category')?.value;
-  const date = document.getElementById('expense-date')?.value;
-  const note = document.getElementById('expense-note')?.value;
-  const errorMsg = document.getElementById('expense-error-msg');
-
-  const amount = parseFloat(amountStr);
-
-  // Validation
-  if (isNaN(amount) || amount <= 0) {
-    if (errorMsg) {
-      errorMsg.textContent = 'Please enter a valid amount greater than ₹0.00.';
-      errorMsg.style.display = 'block';
-    }
-    return;
-  }
-
-  if (!date) {
-    if (errorMsg) {
-      errorMsg.textContent = 'Please select a valid date.';
-      errorMsg.style.display = 'block';
-    }
-    return;
-  }
-
-  if (editingTransactionId) {
-    updateTransaction(editingTransactionId, { type, amount, category, date, note });
-  } else {
-    addTransaction({ type, amount, category, date, note });
-  }
-
-  expandedDates.add(date);
-  closeModal();
-}
-
-function handleSaveAndAddAnother(e) {
-  if (e) e.preventDefault();
-
-  const type = document.querySelector('input[name="expense-type"]:checked')?.value || 'expense';
-  const amountStr = document.getElementById('expense-amount')?.value;
-  const category = document.getElementById('expense-category')?.value;
-  const date = document.getElementById('expense-date')?.value;
-  const note = document.getElementById('expense-note')?.value;
-  const errorMsg = document.getElementById('expense-error-msg');
-  const successMsg = document.getElementById('expense-success-msg');
-  const amountInput = document.getElementById('expense-amount');
+  const titleInput = document.getElementById('expense-title');
+  const dateInput = document.getElementById('expense-date');
   const noteInput = document.getElementById('expense-note');
+  const errorMsg = document.getElementById('expense-error-msg');
+  const itemsListEl = document.getElementById('expense-items-list');
 
-  const amount = parseFloat(amountStr);
+  const title = (titleInput?.value || '').trim();
+  const date = dateInput?.value;
+  const note = (noteInput?.value || '').trim();
 
-  // Validation
-  if (isNaN(amount) || amount <= 0) {
+  // Validation 1: Main transaction title
+  if (!title) {
     if (errorMsg) {
-      errorMsg.textContent = 'Please enter a valid amount greater than ₹0.00.';
+      errorMsg.textContent = 'Please enter a transaction title.';
       errorMsg.style.display = 'block';
     }
-    if (successMsg) successMsg.style.display = 'none';
+    titleInput?.focus();
     return;
   }
 
+  // Validation 2: Date
   if (!date) {
     if (errorMsg) {
       errorMsg.textContent = 'Please select a valid date.';
       errorMsg.style.display = 'block';
     }
-    if (successMsg) successMsg.style.display = 'none';
     return;
+  }
+
+  // Validation 3: Validate that every item has an amount before saving
+  const itemRows = itemsListEl ? itemsListEl.querySelectorAll('.expense-item-row') : [];
+  if (itemRows.length === 0) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please add at least one item.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
+  const items = [];
+  let totalAmount = 0;
+
+  for (let i = 0; i < itemRows.length; i++) {
+    const row = itemRows[i];
+    const nameInput = row.querySelector('.expense-item-name');
+    const amtInput = row.querySelector('.expense-item-amount');
+    const catSelect = row.querySelector('.expense-item-category');
+
+    const itemName = (nameInput?.value || '').trim();
+    const amtVal = parseFloat(amtInput?.value);
+    const catVal = catSelect?.value;
+
+    if (isNaN(amtVal) || amtVal <= 0) {
+      if (errorMsg) {
+        errorMsg.textContent = `Please enter a valid amount greater than ₹0.00 for item ${i + 1}${itemName ? ` ("${itemName}")` : ''}.`;
+        errorMsg.style.display = 'block';
+      }
+      amtInput?.focus();
+      return;
+    }
+
+    totalAmount += amtVal;
+    items.push({
+      id: row.dataset.itemId || generateItemId(),
+      name: itemName || `${title} Item ${i + 1}`,
+      amount: amtVal,
+      category: catVal
+    });
   }
 
   if (errorMsg) errorMsg.style.display = 'none';
 
-  // Add the transaction
-  addTransaction({ type, amount, category, date, note });
+  // Determine main category: if all items share the same category, use it; otherwise 'Split'
+  const uniqueCategories = [...new Set(items.map(it => it.category))];
+  const mainCategory = uniqueCategories.length === 1 ? uniqueCategories[0] : 'Split';
 
-  // Ensure this date is expanded in the list
+  if (editingTransactionId) {
+    updateTransaction(editingTransactionId, {
+      type,
+      title,
+      amount: totalAmount,
+      category: mainCategory,
+      date,
+      note,
+      items
+    });
+  } else {
+    addTransaction({
+      type,
+      title,
+      amount: totalAmount,
+      category: mainCategory,
+      date,
+      note,
+      items
+    });
+  }
+
   expandedDates.add(date);
-
-  // Show inline success message
-  if (successMsg) {
-    const isIncome = type === 'income';
-    const sign = isIncome ? '+' : '-';
-    successMsg.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      <span>Saved <strong>${sign}${formatCurrency(amount)}</strong> (${escapeHtml(category)}). Add another for <strong>${formatDate(date)}</strong> below:</span>
-    `;
-    successMsg.style.display = 'flex';
-  }
-
-  // Reset fields for the next transaction while preserving the selected date
-  if (amountInput) {
-    amountInput.value = '';
-    amountInput.focus();
-  }
-  if (noteInput) {
-    noteInput.value = '';
-  }
-
-  // Refresh view
-  renderExpenses();
+  closeModal();
 }
 
 /* ============================================================
@@ -1078,8 +1389,7 @@ function resetFilters() {
 export function initExpenses() {
   load();
 
-  // 1. Initial category population for form and filter dropdowns
-  populateCategories('expense');
+  // 1. Initial category population for filter dropdown
   populateFilterCategories();
 
   // 2. Initialize modal calendar widget
@@ -1088,7 +1398,7 @@ export function initExpenses() {
   // 3. Add Transaction Button
   document.getElementById('expense-add-btn')?.addEventListener('click', () => openModal());
 
-  // 3. Modal close and cancel buttons
+  // 4. Modal close and cancel buttons
   document.getElementById('expense-modal-close')?.addEventListener('click', closeModal);
   document.getElementById('expense-modal-cancel')?.addEventListener('click', closeModal);
   document.getElementById('expense-modal-overlay')?.addEventListener('click', (e) => {
@@ -1105,19 +1415,23 @@ export function initExpenses() {
     }
   });
 
-  // 4. Form type radio change (Income vs Expense categories update)
+  // 5. Form type radio change (Income vs Expense updates line item categories)
   document.querySelectorAll('input[name="expense-type"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
-      populateCategories(e.target.value);
+      updateItemRowCategories(e.target.value);
     });
   });
 
-  // 5. Form submission
-  document.getElementById('expense-form')?.addEventListener('submit', handleFormSubmit);
-  document.getElementById('expense-modal-add-another')?.addEventListener('click', handleSaveAndAddAnother);
-  document.getElementById('expense-add-another-inline-btn')?.addEventListener('click', handleSaveAndAddAnother);
+  // 6. Form line item: Add Another Item button
+  document.getElementById('expense-add-item-btn')?.addEventListener('click', () => {
+    const newRow = addItemRow();
+    newRow?.querySelector('.expense-item-name')?.focus();
+  });
 
-  // 6. Filter Controls
+  // 7. Form submission
+  document.getElementById('expense-form')?.addEventListener('submit', handleFormSubmit);
+
+  // 8. Filter Controls
   document.getElementById('expense-filter-period')?.addEventListener('change', (e) => {
     activeFilter.period = e.target.value;
     renderExpenses();
@@ -1144,7 +1458,7 @@ export function initExpenses() {
 
   document.getElementById('expense-reset-filters-btn')?.addEventListener('click', resetFilters);
 
-  // 7. Initial render
+  // 9. Initial render
   renderExpenses();
 }
 

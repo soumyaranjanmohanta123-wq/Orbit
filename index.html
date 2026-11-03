@@ -615,6 +615,17 @@
         </div>
       </div>
 
+      <!-- Category Breakdown Card -->
+      <div class="expense-card expense-card--breakdown" id="expense-category-breakdown-card">
+        <div class="expense-card__header">
+          <h2 class="expense-card__title">Category Breakdown</h2>
+          <span id="expense-breakdown-total" class="badge badge--secondary">Expenses this month</span>
+        </div>
+        <div id="expense-category-breakdown" class="expense-category-breakdown">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
       <!-- Transactions List Card -->
       <div class="expense-card">
         <div class="expense-card__header">
@@ -668,36 +679,14 @@
               </div>
             </div>
 
-            <!-- Amount Input with Currency Prefix & Add Another Button -->
+            <!-- Transaction Title -->
             <div class="form-group">
-              <label for="expense-amount" class="label">Amount (₹)</label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix">₹</span>
-                <input type="number" id="expense-amount" class="input input--has-prefix" placeholder="0.00" step="0.01" min="0.01" required>
-              </div>
-              <button type="button" id="expense-add-another-inline-btn" class="btn btn--secondary btn--sm btn--add-another-inline" title="Save this amount and enter another transaction for this date">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px;">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                + Add Another Transaction
-              </button>
-            </div>
-
-            <!-- Category Select -->
-            <div class="form-group">
-              <label for="expense-category" class="label">Category</label>
-              <select id="expense-category" class="input" required></select>
-            </div>
-
-            <!-- Note / Description Input -->
-            <div class="form-group">
-              <label for="expense-note" class="label">Note / Description (Optional)</label>
-              <input type="text" id="expense-note" class="input" placeholder="e.g. Grocery run, Client payment, Electric bill" maxlength="120">
+              <label for="expense-title" class="label">Transaction Title</label>
+              <input type="text" id="expense-title" class="input" placeholder="e.g. Supermarket, Monthly Rent, Client Project" maxlength="80" required>
             </div>
 
             <!-- Date & Expandable Calendar Section -->
-            <div class="form-group expense-date-section form-group--last" id="expense-date-section">
+            <div class="form-group expense-date-section" id="expense-date-section">
               <div class="expense-calendar-header-row">
                 <label for="expense-date" class="label">Date</label>
                 <div class="expense-calendar-presets">
@@ -761,6 +750,35 @@
 
               <!-- Underlying synchronized date input -->
               <input type="hidden" id="expense-date" name="expense-date" required>
+            </div>
+
+            <!-- Note / Memo Input (Optional) -->
+            <div class="form-group">
+              <label for="expense-note" class="label">Note / Memo (Optional)</label>
+              <input type="text" id="expense-note" class="input" placeholder="e.g. Weekly family shopping run" maxlength="120">
+            </div>
+
+            <!-- Items / Line Items Section -->
+            <div class="expense-items-section">
+              <div class="expense-items-header">
+                <span class="expense-items-header__title">Items / Line Items</span>
+                <div class="expense-items-total-wrap">
+                  <span class="expense-items-total-label">Total:</span>
+                  <span id="expense-items-total" class="expense-items-total-val">₹0.00</span>
+                </div>
+              </div>
+
+              <!-- Dynamic Item Rows Container -->
+              <div id="expense-items-list" class="expense-items-list"></div>
+
+              <!-- Add Another Item Button -->
+              <button type="button" id="expense-add-item-btn" class="btn btn--secondary btn--sm btn--add-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 4px;">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add Another Item
+              </button>
             </div>
 
             <div class="modal__footer modal__footer--spaced">
