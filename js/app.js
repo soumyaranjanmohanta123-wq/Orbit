@@ -12,6 +12,7 @@ import * as NotesStore from './notesStore.js';
 import { initExpenses } from './expenses.js';
 import { initRoutines } from './routines.js';
 import { initDashboard } from './dashboard.js';
+import { initDataManager } from './dataManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize UI shell (theme, routing, sidebar)
@@ -42,6 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Initialize Dashboard Module (pulls data from all modules)
   initDashboard();
+
+  // 6. Initialize Data Management (Export & Import)
+  initDataManager();
 
   // Re-render views when navigating (e.g. returning to Dashboard updates fresh stats)
   onViewChange((view) => {

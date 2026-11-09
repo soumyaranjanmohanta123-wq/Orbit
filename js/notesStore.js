@@ -583,6 +583,58 @@ export function searchNotes(query) {
 }
 
 /* ============================================================
+   Import & Export
+   ============================================================ */
+
+/**
+ * Export all notes, folders, and expanded states.
+ * @returns {{ items: Array<Object>, expanded: Array<string> }}
+ */
+export function exportNotesData() {
+  return {
+    items: getAllItems(),
+    expanded: [...expandedFolders]
+  };
+}
+
+/**
+ * Import notes and folders into the store.
+ * @param {Array<Object>|{items: Array<Object>, expanded?: Array<string>}} incomingData
+ * @param {'merge'|'replace'} [mode='merge']
+ * @returns {number} Count of items imported
+ */
+export function importNotesData(incomingData, mode = 'merge') {
+  const incomingItems = Array.isArray(incomingData) ? incomingData : (incomingData?.items || []);
+  if (!Array.isArray(incomingItems)) return 0;
+
+  // Validate and normalize items
+  const validItems = incomingItems.filter(it => it && typeof it === 'object' && it.id && it.type);
+
+  if (mode === 'replace') {
+    items = validItems;
+    expandedFolders.clear();
+    const expandedList = Array.isArray(incomingData?.expanded) ? incomingData.expanded : [];
+    expandedList.forEach(id => expandedFolders.add(id));
+    saveExpanded();
+  } else {
+    // Merge mode: index existing items by ID
+    const map = new Map(items.map(it => [it.id, it]));
+    validItems.forEach(item => {
+      map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+    });
+    items = [...map.values()];
+
+    if (Array.isArray(incomingData?.expanded)) {
+      incomingData.expanded.forEach(id => expandedFolders.add(id));
+      saveExpanded();
+    }
+  }
+
+  save();
+  return validItems.length;
+}
+
+/* ============================================================
    Initialization
    ============================================================ */
 

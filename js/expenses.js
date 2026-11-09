@@ -1462,3 +1462,53 @@ export function initExpenses() {
   renderExpenses();
 }
 
+/* ============================================================
+   Import & Export
+   ============================================================ */
+
+/**
+ * Export all expense and income transactions.
+ * @returns {Array<Object>}
+ */
+export function exportExpensesData() {
+  return getAllTransactions();
+}
+
+/**
+ * Import transactions into the expense tracker.
+ * @param {Array<Object>} incomingTransactions
+ * @param {'merge'|'replace'} [mode='merge']
+ * @returns {number} Count of transactions imported
+ */
+export function importExpensesData(incomingTransactions, mode = 'merge') {
+  if (!Array.isArray(incomingTransactions)) return 0;
+
+  const validTransactions = incomingTransactions.filter(t => t && typeof t === 'object').map(t => {
+    return {
+      id: t.id || generateId(),
+      type: t.type === 'income' ? 'income' : 'expense',
+      title: t.title || t.note || t.category || 'Transaction',
+      amount: Number(t.amount) || 0,
+      category: t.category || 'Other',
+      date: t.date || getTodayDateString(),
+      note: t.note || '',
+      items: Array.isArray(t.items) ? t.items : getTransactionItems(t),
+      createdAt: t.createdAt || new Date().toISOString()
+    };
+  });
+
+  if (mode === 'replace') {
+    transactions = validTransactions;
+  } else {
+    const map = new Map(transactions.map(t => [t.id, t]));
+    validTransactions.forEach(t => {
+      map.set(t.id, { ...(map.get(t.id) || {}), ...t });
+    });
+    transactions = [...map.values()];
+  }
+
+  save();
+  renderExpenses();
+  return validTransactions.length;
+}
+

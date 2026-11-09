@@ -652,3 +652,60 @@ export function initRoutines() {
   renderRoutines();
 }
 
+/* ============================================================
+   Import & Export
+   ============================================================ */
+
+/**
+ * Export all routine and habit records.
+ * @returns {Array<Object>}
+ */
+export function exportRoutinesData() {
+  return getAllRoutines();
+}
+
+/**
+ * Import routine and habit records into the tracker.
+ * @param {Array<Object>} incomingRoutines
+ * @param {'merge'|'replace'} [mode='merge']
+ * @returns {number} Count of routines imported
+ */
+export function importRoutinesData(incomingRoutines, mode = 'merge') {
+  if (!Array.isArray(incomingRoutines)) return 0;
+
+  const validRoutines = incomingRoutines.filter(r => r && typeof r === 'object').map(r => {
+    return {
+      id: r.id || generateId(),
+      title: r.title || 'Untitled Habit',
+      category: r.category || HABIT_CATEGORIES[0],
+      timeOfDay: r.timeOfDay || 'morning',
+      completedDates: Array.isArray(r.completedDates) ? r.completedDates : [],
+      createdAt: r.createdAt || new Date().toISOString()
+    };
+  });
+
+  if (mode === 'replace') {
+    routines = validRoutines;
+  } else {
+    const map = new Map(routines.map(r => [r.id, r]));
+    validRoutines.forEach(r => {
+      if (map.has(r.id)) {
+        const existing = map.get(r.id);
+        const mergedDates = [...new Set([...(existing.completedDates || []), ...(r.completedDates || [])])];
+        map.set(r.id, {
+          ...existing,
+          ...r,
+          completedDates: mergedDates
+        });
+      } else {
+        map.set(r.id, r);
+      }
+    });
+    routines = [...map.values()];
+  }
+
+  save();
+  renderRoutines();
+  return validRoutines.length;
+}
+

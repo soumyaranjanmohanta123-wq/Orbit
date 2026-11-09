@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/expenses.css">
   <link rel="stylesheet" href="css/routines.css">
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/dataManager.css">
 
   <!-- Markdown parser & XSS sanitizer (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -99,8 +100,18 @@
       </a>
     </nav>
 
-    <!-- Footer: Day / Night Mode Toggle -->
+    <!-- Footer: Data Backup & Theme Toggle -->
     <div class="sidebar__footer">
+      <button type="button" class="sidebar-action-btn" id="sidebar-data-btn" aria-label="Backup & Restore Data" title="Backup & Restore Data">
+        <div class="sidebar-action-btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <span class="sidebar-action-btn__label sidebar__collapse-label">Backup & Restore</span>
+      </button>
       <button type="button" class="theme-toggle" id="theme-toggle-btn" aria-label="Toggle day / night mode" title="Toggle day / night mode">
         <div class="theme-toggle__icon-wrap">
           <!-- Sun icon (shown in light mode) -->
@@ -131,8 +142,8 @@
 
   <!-- ================================================================
        MOBILE HEADER
-       Shown only on small screens (< 768px). Displays the logo
-       and a theme toggle since the sidebar is hidden.
+       Shown only on small screens (< 768px). Displays the logo,
+       a data backup button, and a theme toggle.
        ================================================================ -->
   <header class="mobile-header" id="mobile-header">
     <div class="mobile-header__logo">
@@ -142,24 +153,33 @@
       </svg>
       <span>Orbit</span>
     </div>
-    <button type="button" class="theme-toggle" id="mobile-theme-toggle" aria-label="Toggle day / night mode" title="Toggle day / night mode">
-      <div class="theme-toggle__icon-wrap">
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    <div class="mobile-header__actions">
+      <button type="button" class="mobile-icon-btn" id="mobile-data-btn" aria-label="Backup & Restore Data" title="Backup & Restore Data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </div>
-    </button>
+      </button>
+      <button type="button" class="theme-toggle" id="mobile-theme-toggle" aria-label="Toggle day / night mode" title="Toggle day / night mode">
+        <div class="theme-toggle__icon-wrap">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </div>
+      </button>
+    </div>
   </header>
 
 
@@ -202,6 +222,14 @@
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
             <span>+ Habit</span>
+          </button>
+          <button id="dash-action-data" class="btn btn--secondary btn--sm" title="Export or Import Orbit Data">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Backup & Restore</span>
           </button>
         </div>
       </div>
@@ -917,6 +945,163 @@
       <span>Routines</span>
     </a>
   </nav>
+
+
+  <!-- ================================================================
+       DATA BACKUP & RESTORE MODAL (Export / Import)
+       ================================================================ -->
+  <div id="data-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="data-modal-title">
+    <div class="modal data-modal" id="data-modal">
+      <div class="modal__header">
+        <div class="data-modal__header-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px; color: var(--color-primary);">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <h2 id="data-modal-title">Backup & Restore Data</h2>
+        </div>
+        <button type="button" id="data-modal-close" class="modal__close" aria-label="Close dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal__body data-modal__body">
+        <!-- Live Current Data Summary Bar -->
+        <div class="data-summary-bar">
+          <div class="data-summary-item">
+            <span class="data-summary-label">Notes & Folders</span>
+            <span id="data-summary-notes" class="data-summary-val">0</span>
+          </div>
+          <div class="data-summary-item">
+            <span class="data-summary-label">Transactions</span>
+            <span id="data-summary-expenses" class="data-summary-val">0</span>
+          </div>
+          <div class="data-summary-item">
+            <span class="data-summary-label">Habits</span>
+            <span id="data-summary-routines" class="data-summary-val">0</span>
+          </div>
+        </div>
+
+        <!-- Feedback Alert Banner -->
+        <div id="data-modal-alert" class="data-modal-alert" style="display: none;"></div>
+
+        <!-- Two Column Grid for Export and Import Sections -->
+        <div class="data-sections-grid">
+
+          <!-- 1. EXPORT SECTION -->
+          <div class="data-section-card">
+            <div class="data-section-header">
+              <div class="data-section-icon data-section-icon--export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="data-section-title">Export Data</h3>
+                <p class="data-section-desc">Download a complete JSON backup of your Orbit workspace.</p>
+              </div>
+            </div>
+
+            <div class="data-options-group">
+              <label class="data-checkbox-label">
+                <input type="checkbox" id="export-check-notes" checked>
+                <span>Notes & Folders</span>
+              </label>
+              <label class="data-checkbox-label">
+                <input type="checkbox" id="export-check-expenses" checked>
+                <span>Expenses & Income</span>
+              </label>
+              <label class="data-checkbox-label">
+                <input type="checkbox" id="export-check-routines" checked>
+                <span>Routines & Habits</span>
+              </label>
+            </div>
+
+            <button type="button" id="btn-export-backup" class="btn btn--primary data-action-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px; margin-right: 6px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export Backup (.json)
+            </button>
+          </div>
+
+          <!-- 2. IMPORT SECTION -->
+          <div class="data-section-card">
+            <div class="data-section-header">
+              <div class="data-section-icon data-section-icon--import">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="data-section-title">Import Data</h3>
+                <p class="data-section-desc">Restore or merge data from an Orbit JSON backup file.</p>
+              </div>
+            </div>
+
+            <!-- Dropzone -->
+            <div class="data-dropzone" id="data-dropzone" role="button" tabindex="0" title="Click or drag file to upload">
+              <input type="file" id="data-import-file" accept=".json,application/json" class="sr-only">
+              <svg class="data-dropzone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              <div class="data-dropzone__text" id="data-dropzone-text">
+                <strong>Click to choose file</strong> or drag & drop here
+              </div>
+              <div class="data-dropzone__sub">JSON files only</div>
+            </div>
+
+            <!-- File preview details -->
+            <div id="data-import-preview" class="data-import-preview" style="display: none;"></div>
+
+            <!-- Import Mode Selection -->
+            <div class="data-import-mode-wrap">
+              <label class="label" style="margin-bottom: 6px;">Restore Mode</label>
+              <div class="data-radio-group">
+                <label class="data-radio-label">
+                  <input type="radio" name="import-mode" value="merge" checked>
+                  <div>
+                    <strong>Merge (Safe)</strong>
+                    <span class="data-radio-sub">Adds new items and updates matches without removing your current items.</span>
+                  </div>
+                </label>
+                <label class="data-radio-label">
+                  <input type="radio" name="import-mode" value="replace">
+                  <div>
+                    <strong style="color: var(--color-danger);">Replace / Overwrite</strong>
+                    <span class="data-radio-sub">Completely replaces current workspace data with the backup file.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <button type="button" id="btn-import-backup" class="btn btn--secondary data-action-btn" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px; margin-right: 6px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Import Data
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
 
 
   <!-- Entry point — loads as an ES module so import/export works -->
