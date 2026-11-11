@@ -37,6 +37,68 @@ export const TIME_OF_DAY_OPTIONS = [
   { value: 'evening', label: 'Evening' }
 ];
 
+export const DAYS_OF_WEEK = [
+  { index: 1, short: 'Mon', full: 'Monday' },
+  { index: 2, short: 'Tue', full: 'Tuesday' },
+  { index: 3, short: 'Wed', full: 'Wednesday' },
+  { index: 4, short: 'Thu', full: 'Thursday' },
+  { index: 5, short: 'Fri', full: 'Friday' },
+  { index: 6, short: 'Sat', full: 'Saturday' },
+  { index: 0, short: 'Sun', full: 'Sunday' }
+];
+
+/**
+ * Return normalized days array (0=Sun, 1=Mon, ..., 6=Sat).
+ * If undefined or empty, defaults to everyday [0, 1, 2, 3, 4, 5, 6].
+ * @param {Object} r
+ * @returns {Array<number>}
+ */
+export function getRoutineDays(r) {
+  if (r && Array.isArray(r.days) && r.days.length > 0) {
+    return r.days.map(Number);
+  }
+  return [0, 1, 2, 3, 4, 5, 6];
+}
+
+/**
+ * Format active days into a readable summary label.
+ * @param {Array<number>} days
+ * @returns {string}
+ */
+export function formatDaysSummary(days = []) {
+  const norm = (Array.isArray(days) && days.length > 0) ? days.map(Number) : [0, 1, 2, 3, 4, 5, 6];
+  if (norm.length >= 7) return 'Every day';
+
+  const set = new Set(norm);
+  const isWeekdays = norm.length === 5 && [1, 2, 3, 4, 5].every(d => set.has(d));
+  if (isWeekdays) return 'Weekdays';
+
+  const isWeekends = norm.length === 2 && [0, 6].every(d => set.has(d));
+  if (isWeekends) return 'Weekends';
+
+  // Sort in Mon -> Sun order
+  const orderedIndices = [1, 2, 3, 4, 5, 6, 0];
+  const sorted = orderedIndices.filter(d => set.has(d));
+  const names = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
+  return sorted.map(d => names[d]).join(', ');
+}
+
+/**
+ * Format a 24-hour time string ("HH:MM") into 12-hour AM/PM format ("H:MM AM").
+ * @param {string} timeStr
+ * @returns {string}
+ */
+export function formatExactTime(timeStr) {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  const m = parts[1].padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 || 12;
+  return `${displayH}:${m} ${ampm}`;
+}
+
 /* ============================================================
    State
    ============================================================ */
@@ -199,12 +261,14 @@ export function getRoutine(id) {
   return routines.find(r => r.id === id) || null;
 }
 
-export function addRoutine({ title, category, timeOfDay }) {
+export function addRoutine({ title, category, timeOfDay, time, days }) {
   const routine = {
     id: generateId(),
     title: (title || 'New Habit').trim(),
     category: (category || 'Other').trim(),
     timeOfDay: (timeOfDay || 'anytime').toLowerCase(),
+    time: (time || '').trim(),
+    days: (Array.isArray(days) && days.length > 0) ? days.map(Number) : [0, 1, 2, 3, 4, 5, 6],
     completedDates: [],
     createdAt: new Date().toISOString()
   };
@@ -215,13 +279,17 @@ export function addRoutine({ title, category, timeOfDay }) {
   return routine;
 }
 
-export function updateRoutine(id, { title, category, timeOfDay }) {
+export function updateRoutine(id, { title, category, timeOfDay, time, days }) {
   const item = routines.find(r => r.id === id);
   if (!item) return false;
 
   item.title = (title || 'New Habit').trim();
   item.category = (category || 'Other').trim();
   item.timeOfDay = (timeOfDay || 'anytime').toLowerCase();
+  item.time = (time !== undefined ? time : item.time || '').trim();
+  if (Array.isArray(days) && days.length > 0) {
+    item.days = days.map(Number);
+  }
   item.updatedAt = new Date().toISOString();
 
   save();
@@ -270,16 +338,24 @@ export function toggleRoutine(id, targetDate) {
 
 /**
  * Returns today's routine progress (used by Dashboard in Step 5).
+ * Only accounts for habits scheduled for today's day of week.
  * @returns {{ total: number, completed: number, percentage: number, text: string }}
  */
 export function getTodayRoutineProgress() {
   const today = getTodayDateString();
-  const total = routines.length;
+  const todayDayIndex = new Date().getDay(); // 0 = Sun, 1 = Mon ...
+
+  const scheduledToday = routines.filter(r => getRoutineDays(r).includes(todayDayIndex));
+  const total = scheduledToday.length;
+
   if (total === 0) {
-    return { total: 0, completed: 0, percentage: 0, text: 'No habits yet' };
+    if (routines.length === 0) {
+      return { total: 0, completed: 0, percentage: 0, text: 'No habits yet' };
+    }
+    return { total: 0, completed: 0, percentage: 100, text: 'No habits scheduled for today. Enjoy your rest day!' };
   }
 
-  const completed = routines.filter(r => (r.completedDates || []).includes(today)).length;
+  const completed = scheduledToday.filter(r => (r.completedDates || []).includes(today)).length;
   const percentage = Math.round((completed / total) * 100);
 
   let text = '';
@@ -420,6 +496,11 @@ function renderRoutineCard(r) {
   const streak = calculateStreak(r.completedDates || []);
   const pastDays = getPast7Days(r.completedDates || []);
   const isDoneToday = streak.completedToday;
+  const days = getRoutineDays(r);
+  const daysSummary = formatDaysSummary(days);
+  const exactTimeStr = r.time ? formatExactTime(r.time) : '';
+  const todayDayIndex = new Date().getDay();
+  const isScheduledToday = days.includes(todayDayIndex);
 
   const streakClass = streak.currentStreak >= 3 ? 'habit-streak--hot' : '';
 
@@ -442,6 +523,9 @@ function renderRoutineCard(r) {
           <div class="habit-tags">
             <span class="badge badge--primary">${escapeHtml(r.category)}</span>
             <span class="habit-time-tag">${formatTimeTag(r.timeOfDay)}</span>
+            ${exactTimeStr ? `<span class="habit-time-badge" title="Target time: ${escapeHtml(exactTimeStr)}">⏰ ${escapeHtml(exactTimeStr)}</span>` : ''}
+            <span class="habit-days-badge" title="Active on: ${escapeHtml(daysSummary)}">📅 ${escapeHtml(daysSummary)}</span>
+            ${!isScheduledToday ? `<span class="badge badge--neutral" style="opacity: 0.7;">Rest day</span>` : ''}
           </div>
         </div>
 
@@ -506,8 +590,40 @@ function escapeHtml(str) {
 }
 
 /* ============================================================
-   Habit Modal (Add / Edit)
+   Habit Modal (Add / Edit) & Days Selector
    ============================================================ */
+
+function setSelectedDays(dayIndices = [0, 1, 2, 3, 4, 5, 6]) {
+  const set = new Set(dayIndices.map(Number));
+  document.querySelectorAll('.routine-day-chip').forEach(chip => {
+    const day = Number(chip.dataset.day);
+    const isSelected = set.has(day);
+    chip.classList.toggle('active', isSelected);
+    chip.setAttribute('aria-pressed', String(isSelected));
+  });
+  updateDaysSummaryText();
+}
+
+function getSelectedDays() {
+  const selected = [];
+  document.querySelectorAll('.routine-day-chip.active').forEach(chip => {
+    selected.push(Number(chip.dataset.day));
+  });
+  return selected;
+}
+
+function updateDaysSummaryText() {
+  const summaryEl = document.getElementById('routine-days-summary');
+  if (!summaryEl) return;
+  const days = getSelectedDays();
+  if (days.length === 0) {
+    summaryEl.textContent = 'Please select at least one day';
+    summaryEl.style.color = 'var(--color-danger)';
+  } else {
+    summaryEl.textContent = formatDaysSummary(days);
+    summaryEl.style.color = '';
+  }
+}
 
 export function openModal(routineId = null) {
   editingRoutineId = routineId;
@@ -518,6 +634,7 @@ export function openModal(routineId = null) {
   const titleInput = document.getElementById('routine-title');
   const categorySelect = document.getElementById('routine-category');
   const timeSelect = document.getElementById('routine-time');
+  const exactTimeInput = document.getElementById('routine-exact-time');
   const errorMsg = document.getElementById('routine-error-msg');
 
   if (!modalOverlay || !form) return;
@@ -543,12 +660,16 @@ export function openModal(routineId = null) {
     titleInput.value = item.title;
     categorySelect.value = item.category;
     timeSelect.value = item.timeOfDay || 'anytime';
+    if (exactTimeInput) exactTimeInput.value = item.time || '';
+    setSelectedDays(getRoutineDays(item));
   } else {
     // Add mode
     if (modalTitle) modalTitle.textContent = 'Create New Habit';
     titleInput.value = '';
     categorySelect.value = HABIT_CATEGORIES[0];
     timeSelect.value = 'anytime';
+    if (exactTimeInput) exactTimeInput.value = '';
+    setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
   }
 
   modalOverlay.classList.add('visible');
@@ -571,11 +692,14 @@ function handleFormSubmit(e) {
   const titleInput = document.getElementById('routine-title');
   const categorySelect = document.getElementById('routine-category');
   const timeSelect = document.getElementById('routine-time');
+  const exactTimeInput = document.getElementById('routine-exact-time');
   const errorMsg = document.getElementById('routine-error-msg');
 
   const title = (titleInput?.value || '').trim();
   const category = categorySelect?.value || 'Other';
   const timeOfDay = timeSelect?.value || 'anytime';
+  const time = (exactTimeInput?.value || '').trim();
+  const days = getSelectedDays();
 
   if (!title) {
     if (errorMsg) {
@@ -586,10 +710,18 @@ function handleFormSubmit(e) {
     return;
   }
 
+  if (days.length === 0) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please select at least one day for this habit.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
   if (editingRoutineId) {
-    updateRoutine(editingRoutineId, { title, category, timeOfDay });
+    updateRoutine(editingRoutineId, { title, category, timeOfDay, time, days });
   } else {
-    addRoutine({ title, category, timeOfDay });
+    addRoutine({ title, category, timeOfDay, time, days });
   }
 
   closeModal();
@@ -638,17 +770,53 @@ export function initRoutines() {
     }
   });
 
-  // 3. Form submit handler
+  // 3. Day picker & preset listeners
+  document.querySelectorAll('.routine-day-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      chip.classList.toggle('active');
+      chip.setAttribute('aria-pressed', String(chip.classList.contains('active')));
+      updateDaysSummaryText();
+    });
+  });
+
+  document.querySelectorAll('[data-routine-preset]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const preset = btn.dataset.routinePreset;
+      if (preset === 'everyday') {
+        setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+      } else if (preset === 'weekdays') {
+        setSelectedDays([1, 2, 3, 4, 5]);
+      } else if (preset === 'weekends') {
+        setSelectedDays([0, 6]);
+      }
+    });
+  });
+
+  // Auto-sync time of day if time is picked and time of day was 'anytime'
+  document.getElementById('routine-exact-time')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    const timeSelect = document.getElementById('routine-time');
+    if (val && timeSelect && timeSelect.value === 'anytime') {
+      const h = parseInt(val.split(':')[0], 10);
+      if (h < 12) timeSelect.value = 'morning';
+      else if (h < 17) timeSelect.value = 'afternoon';
+      else timeSelect.value = 'evening';
+    }
+  });
+
+  // 4. Form submit handler
   document.getElementById('routine-form')?.addEventListener('submit', handleFormSubmit);
 
-  // 4. Time filter button group
+  // 5. Time filter button group
   document.querySelectorAll('.routine-time-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       setTimeFilter(btn.dataset.time);
     });
   });
 
-  // 5. Initial render
+  // 6. Initial render
   renderRoutines();
 }
 
@@ -678,7 +846,9 @@ export function importRoutinesData(incomingRoutines, mode = 'merge') {
       id: r.id || generateId(),
       title: r.title || 'Untitled Habit',
       category: r.category || HABIT_CATEGORIES[0],
-      timeOfDay: r.timeOfDay || 'morning',
+      timeOfDay: r.timeOfDay || 'anytime',
+      time: r.time || '',
+      days: (Array.isArray(r.days) && r.days.length > 0) ? r.days.map(Number) : [0, 1, 2, 3, 4, 5, 6],
       completedDates: Array.isArray(r.completedDates) ? r.completedDates : [],
       createdAt: r.createdAt || new Date().toISOString()
     };

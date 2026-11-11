@@ -39,6 +39,151 @@ let statusReadTimeEl = null;
 let pinBtnEl = null;
 
 /* ============================================================
+   Undo / Redo History Manager & Fullscreen State
+   ============================================================ */
+
+const MAX_UNDO_STACK = 80;
+let undoStack = [];
+let redoStack = [];
+let lastRecordedValue = '';
+let undoDebounceTimer = null;
+
+function initUndoHistory(initialValue = '') {
+  undoStack = [{
+    value: initialValue,
+    selectionStart: initialValue.length,
+    selectionEnd: initialValue.length
+  }];
+  redoStack = [];
+  lastRecordedValue = initialValue;
+  updateUndoRedoUI();
+}
+
+function pushUndoSnapshot(force = false) {
+  if (!textareaEl) return;
+  const currentVal = textareaEl.value;
+  const start = textareaEl.selectionStart;
+  const end = textareaEl.selectionEnd;
+
+  if (!force && currentVal === lastRecordedValue) return;
+
+  undoStack.push({
+    value: currentVal,
+    selectionStart: start,
+    selectionEnd: end
+  });
+
+  if (undoStack.length > MAX_UNDO_STACK) {
+    undoStack.shift();
+  }
+
+  redoStack = [];
+  lastRecordedValue = currentVal;
+  updateUndoRedoUI();
+}
+
+function handleTypingUndo() {
+  clearTimeout(undoDebounceTimer);
+  undoDebounceTimer = setTimeout(() => {
+    pushUndoSnapshot(false);
+  }, 400);
+}
+
+export function undo() {
+  if (!textareaEl || undoStack.length <= 1) return;
+
+  const currentVal = textareaEl.value;
+  const start = textareaEl.selectionStart;
+  const end = textareaEl.selectionEnd;
+
+  redoStack.push({
+    value: currentVal,
+    selectionStart: start,
+    selectionEnd: end
+  });
+
+  undoStack.pop(); // Remove current
+  const prev = undoStack[undoStack.length - 1];
+  if (!prev) return;
+
+  lastRecordedValue = prev.value;
+  textareaEl.value = prev.value;
+  textareaEl.setSelectionRange(prev.selectionStart, prev.selectionEnd);
+
+  updatePreview();
+  updateStats();
+  scheduleAutosave();
+  updateUndoRedoUI();
+  textareaEl.focus();
+}
+
+export function redo() {
+  if (!textareaEl || redoStack.length === 0) return;
+
+  const next = redoStack.pop();
+  if (!next) return;
+
+  undoStack.push({
+    value: next.value,
+    selectionStart: next.selectionStart,
+    selectionEnd: next.selectionEnd
+  });
+
+  lastRecordedValue = next.value;
+  textareaEl.value = next.value;
+  textareaEl.setSelectionRange(next.selectionStart, next.selectionEnd);
+
+  updatePreview();
+  updateStats();
+  scheduleAutosave();
+  updateUndoRedoUI();
+  textareaEl.focus();
+}
+
+function updateUndoRedoUI() {
+  const undoBtn = document.getElementById('notes-btn-undo');
+  const redoBtn = document.getElementById('notes-btn-redo');
+
+  if (undoBtn) {
+    const canUndo = undoStack.length > 1;
+    undoBtn.disabled = !canUndo;
+    undoBtn.setAttribute('aria-disabled', String(!canUndo));
+  }
+  if (redoBtn) {
+    const canRedo = redoStack.length > 0;
+    redoBtn.disabled = !canRedo;
+    redoBtn.setAttribute('aria-disabled', String(!canRedo));
+  }
+}
+
+/**
+ * Toggle Fullscreen / Focus Mode for the editor.
+ * @param {boolean|null} [forceState=null]
+ */
+export function toggleFullscreen(forceState = null) {
+  if (!editorContainerEl) return;
+
+  const shouldBeFullscreen = forceState !== null
+    ? forceState
+    : !editorContainerEl.classList.contains('notes-editor--fullscreen');
+
+  editorContainerEl.classList.toggle('notes-editor--fullscreen', shouldBeFullscreen);
+
+  const expandIcon = document.querySelector('.notes-fs-icon-expand');
+  const compressIcon = document.querySelector('.notes-fs-icon-compress');
+  if (expandIcon && compressIcon) {
+    expandIcon.style.display = shouldBeFullscreen ? 'none' : 'block';
+    compressIcon.style.display = shouldBeFullscreen ? 'block' : 'none';
+  }
+
+  const fsBtn = document.getElementById('notes-fullscreen-btn');
+  if (fsBtn) {
+    fsBtn.setAttribute('title', shouldBeFullscreen ? 'Exit Fullscreen (Esc / Ctrl+Shift+F)' : 'Toggle Fullscreen Focus (Ctrl+Shift+F)');
+    fsBtn.setAttribute('aria-pressed', String(shouldBeFullscreen));
+  }
+}
+
+/* ============================================================
    Markdown Engine & Sanitizer (marked + DOMPurify)
    ============================================================ */
 
@@ -70,12 +215,15 @@ function setupMarked() {
 function renderMarkdown(markdown) {
   if (!markdown) return '<p class="markdown-empty-hint">Empty note. Type on the left to see live preview.</p>';
 
+  // Process ==highlight== syntax before markdown parsing
+  const processed = markdown.replace(/==([^=\n\r]+)==/g, '<mark class="note-highlight">$1</mark>');
+
   let rawHtml = '';
   if (typeof window.marked !== 'undefined') {
     try {
       rawHtml = typeof window.marked.parse === 'function'
-        ? window.marked.parse(markdown)
-        : window.marked(markdown);
+        ? window.marked.parse(processed)
+        : window.marked(processed);
     } catch {
       rawHtml = `<pre>${escapeHtml(markdown)}</pre>`;
     }
@@ -87,8 +235,8 @@ function renderMarkdown(markdown) {
   // Sanitize via DOMPurify to eliminate any XSS vulnerability
   if (typeof window.DOMPurify !== 'undefined' && typeof window.DOMPurify.sanitize === 'function') {
     return window.DOMPurify.sanitize(rawHtml, {
-      ADD_ATTR: ['target', 'data-check-index'],
-      ADD_TAGS: ['input']
+      ADD_ATTR: ['target', 'data-check-index', 'class'],
+      ADD_TAGS: ['input', 'mark']
     });
   }
 
@@ -178,6 +326,9 @@ export function openNote(note) {
   if (titleInputEl) titleInputEl.value = note.name || '';
   if (textareaEl) textareaEl.value = note.content || '';
 
+  // Initialize undo / redo history for this note
+  initUndoHistory(note.content || '');
+
   // Update pin button state
   updatePinButton(Boolean(note.pinned));
 
@@ -206,6 +357,10 @@ export function closeNote() {
   }
   currentNoteId = null;
   hasUnsavedChanges = false;
+  undoStack = [];
+  redoStack = [];
+  updateUndoRedoUI();
+  toggleFullscreen(false);
 
   if (emptyStateEl) {
     emptyStateEl.style.display = 'flex';
@@ -527,38 +682,73 @@ function handleTextareaKeydown(e) {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-  // 1. Keyboard formatting shortcuts
-  if (modifier && !e.shiftKey && !e.altKey) {
+  // 1. Undo / Redo & Fullscreen shortcuts
+  if (modifier && !e.altKey) {
     const key = e.key.toLowerCase();
 
-    if (key === 'b') {
+    // Undo (Ctrl+Z)
+    if (key === 'z' && !e.shiftKey) {
       e.preventDefault();
-      insertAround('**', '**', 'bold text');
+      undo();
       return;
     }
 
-    if (key === 'i') {
+    // Redo (Ctrl+Y or Ctrl+Shift+Z)
+    if (key === 'y' || (key === 'z' && e.shiftKey)) {
       e.preventDefault();
-      insertAround('*', '*', 'italic text');
+      redo();
       return;
     }
 
-    if (key === 'k') {
+    // Fullscreen toggle (Ctrl+Shift+F)
+    if (key === 'f' && e.shiftKey) {
       e.preventDefault();
-      insertLink();
+      toggleFullscreen();
       return;
     }
 
-    if (key === 's') {
-      e.preventDefault();
-      saveNow();
-      return;
+    // Formatting shortcuts (no shift)
+    if (!e.shiftKey) {
+      if (key === 'b') {
+        e.preventDefault();
+        pushUndoSnapshot(true);
+        insertAround('**', '**', 'bold text');
+        return;
+      }
+
+      if (key === 'i') {
+        e.preventDefault();
+        pushUndoSnapshot(true);
+        insertAround('*', '*', 'italic text');
+        return;
+      }
+
+      if (key === 'h') {
+        e.preventDefault();
+        pushUndoSnapshot(true);
+        insertAround('==', '==', 'highlighted text');
+        return;
+      }
+
+      if (key === 'k') {
+        e.preventDefault();
+        pushUndoSnapshot(true);
+        insertLink();
+        return;
+      }
+
+      if (key === 's') {
+        e.preventDefault();
+        saveNow();
+        return;
+      }
     }
   }
 
   // 2. Tab key indentation (2 spaces or indent/unindent selected lines)
   if (e.key === 'Tab') {
     e.preventDefault();
+    pushUndoSnapshot(true);
     handleTabIndentation(e.shiftKey);
     return;
   }
@@ -812,8 +1002,9 @@ export function initNotesEditor() {
 
   if (!editorContainerEl || !textareaEl) return;
 
-  // 1. Textarea input listener (stats, preview, autosave)
+  // 1. Textarea input listener (stats, preview, autosave, undo tracking)
   textareaEl.addEventListener('input', () => {
+    handleTypingUndo();
     updateStats();
     if (currentViewMode === 'split' || currentViewMode === 'preview') {
       updatePreview();
@@ -851,11 +1042,13 @@ export function initNotesEditor() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const format = btn.dataset.format;
+      pushUndoSnapshot(true);
 
       switch (format) {
         case 'bold':          insertAround('**', '**', 'bold text'); break;
         case 'italic':        insertAround('*', '*', 'italic text'); break;
         case 'strikethrough': insertAround('~~', '~~', 'strikethrough'); break;
+        case 'highlight':     insertAround('==', '==', 'highlighted text'); break;
         case 'h1':            insertLinePrefix('# '); break;
         case 'h2':            insertLinePrefix('## '); break;
         case 'h3':            insertLinePrefix('### '); break;
@@ -871,12 +1064,36 @@ export function initNotesEditor() {
     });
   });
 
-  // 6. Action buttons
+  // 6. Undo & Redo buttons
+  document.getElementById('notes-btn-undo')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    undo();
+  });
+
+  document.getElementById('notes-btn-redo')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    redo();
+  });
+
+  // 7. Fullscreen button
+  document.getElementById('notes-fullscreen-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFullscreen();
+  });
+
+  // 8. Escape key listener for fullscreen
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editorContainerEl?.classList.contains('notes-editor--fullscreen')) {
+      toggleFullscreen(false);
+    }
+  });
+
+  // 9. Action buttons
   document.getElementById('notes-export-btn')?.addEventListener('click', exportNote);
   document.getElementById('notes-copy-btn')?.addEventListener('click', copyNoteContent);
   pinBtnEl?.addEventListener('click', toggleCurrentPin);
 
-  // 7. Window resize handler to guard split mode on mobile
+  // 10. Window resize handler to guard split mode on mobile
   window.addEventListener('resize', () => {
     if (window.innerWidth < 768 && currentViewMode === 'split') {
       setViewMode('edit');

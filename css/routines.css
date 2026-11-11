@@ -336,6 +336,98 @@
   outline-offset: 1px;
 }
 
+/* --- Days Picker & Specific Time in Modal --- */
+.routine-days-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.routine-days-presets {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.routine-days-picker {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.routine-day-chip {
+  flex: 1;
+  min-width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.routine-day-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+.routine-day-chip.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+
+.routine-days-summary {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  display: block;
+}
+
+.routine-time-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.routine-time-row > .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Habit card schedule badges */
+.habit-days-badge {
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.habit-time-badge {
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 
 /* --- Responsive Mobile Overrides --- */
 @media (max-width: 767px) {

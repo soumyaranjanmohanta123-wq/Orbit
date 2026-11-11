@@ -139,8 +139,14 @@ function renderRoutines() {
     return;
   }
 
-  // Display top 4 habits for quick daily check-off
-  const topHabits = habits.slice(0, 4);
+  // Prioritize habits scheduled for today, followed by other habits (up to 4)
+  const todayDay = new Date().getDay();
+  const scheduledToday = habits.filter(h => {
+    const days = (Array.isArray(h.days) && h.days.length > 0) ? h.days : [0, 1, 2, 3, 4, 5, 6];
+    return days.includes(todayDay);
+  });
+  const notScheduledToday = habits.filter(h => !scheduledToday.includes(h));
+  const topHabits = [...scheduledToday, ...notScheduledToday].slice(0, 4);
   listEl.innerHTML = topHabits.map(h => {
     const streak = calculateStreak(h.completedDates || []);
     const isDone = streak.completedToday;

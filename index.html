@@ -434,11 +434,32 @@
                       <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                   </button>
+                  <button id="notes-fullscreen-btn" type="button" class="action-icon-btn" title="Toggle Fullscreen Focus (Ctrl+Shift+F)" aria-label="Toggle Fullscreen">
+                    <svg class="notes-fs-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                    <svg class="notes-fs-icon-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
 
               <!-- Formatting toolbar -->
               <div class="notes-toolbar" role="toolbar" aria-label="Markdown formatting toolbar">
+                <button type="button" class="notes-toolbar__btn" id="notes-btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" id="notes-btn-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" aria-label="Redo" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+                  </svg>
+                </button>
+
+                <div class="notes-toolbar__divider"></div>
+
                 <button type="button" class="notes-toolbar__btn" data-format="bold" title="Bold (Ctrl+B)" aria-label="Bold">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
@@ -452,6 +473,12 @@
                 <button type="button" class="notes-toolbar__btn" data-format="strikethrough" title="Strikethrough" aria-label="Strikethrough">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M16 4H9a3 3 0 0 0-2.83 4M14 12a4 4 0 0 1 0 8H6"/><line x1="4" y1="12" x2="20" y2="12"/>
+                  </svg>
+                </button>
+                <button type="button" class="notes-toolbar__btn" data-format="highlight" title="Highlight (==text==, Ctrl+H)" aria-label="Highlight">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 11-6 6v3h3l6-6"/>
+                    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
                   </svg>
                 </button>
 
@@ -888,10 +915,38 @@
               <select id="routine-category" class="input" required></select>
             </div>
 
-            <!-- Time of Day -->
-            <div class="form-group form-group--last">
-              <label for="routine-time" class="label">Time of Day</label>
-              <select id="routine-time" class="input"></select>
+            <!-- Frequency / Active Days -->
+            <div class="form-group">
+              <div class="routine-days-header">
+                <label class="label" style="margin-bottom: 0;">Repeat on Days</label>
+                <div class="routine-days-presets">
+                  <button type="button" class="btn btn--xs btn--secondary" data-routine-preset="everyday">Everyday</button>
+                  <button type="button" class="btn btn--xs btn--secondary" data-routine-preset="weekdays">Weekdays</button>
+                  <button type="button" class="btn btn--xs btn--secondary" data-routine-preset="weekends">Weekends</button>
+                </div>
+              </div>
+              <div class="routine-days-picker" id="routine-days-picker" role="group" aria-label="Select repeat days">
+                <button type="button" class="routine-day-chip active" data-day="1" aria-pressed="true">Mon</button>
+                <button type="button" class="routine-day-chip active" data-day="2" aria-pressed="true">Tue</button>
+                <button type="button" class="routine-day-chip active" data-day="3" aria-pressed="true">Wed</button>
+                <button type="button" class="routine-day-chip active" data-day="4" aria-pressed="true">Thu</button>
+                <button type="button" class="routine-day-chip active" data-day="5" aria-pressed="true">Fri</button>
+                <button type="button" class="routine-day-chip active" data-day="6" aria-pressed="true">Sat</button>
+                <button type="button" class="routine-day-chip active" data-day="0" aria-pressed="true">Sun</button>
+              </div>
+              <span class="routine-days-summary" id="routine-days-summary">Every day</span>
+            </div>
+
+            <!-- Time of Day & Scheduled Time -->
+            <div class="routine-time-row form-group form-group--last">
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="routine-time" class="label">Time of Day</label>
+                <select id="routine-time" class="input"></select>
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="routine-exact-time" class="label">Scheduled Time (optional)</label>
+                <input type="time" id="routine-exact-time" class="input">
+              </div>
             </div>
 
             <div class="modal__footer modal__footer--spaced">
