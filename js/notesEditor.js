@@ -215,8 +215,11 @@ function setupMarked() {
 function renderMarkdown(markdown) {
   if (!markdown) return '<p class="markdown-empty-hint">Empty note. Type on the left to see live preview.</p>';
 
-  // Process ==highlight== syntax before markdown parsing
-  const processed = markdown.replace(/==([^=\n\r]+)==/g, '<mark class="note-highlight">$1</mark>');
+  // Process multi-color highlight syntax: ==text== (default yellow) or ==color:text== or ==color|text==
+  const processed = markdown.replace(/==(?:(yellow|green|blue|purple|pink|orange)[:|])?([^=\n\r]+?)==/gi, (match, colorPrefix, content) => {
+    const color = (colorPrefix || 'yellow').toLowerCase();
+    return `<mark class="note-highlight note-highlight--${color}">${content}</mark>`;
+  });
 
   let rawHtml = '';
   if (typeof window.marked !== 'undefined') {
@@ -361,6 +364,10 @@ export function closeNote() {
   redoStack = [];
   updateUndoRedoUI();
   toggleFullscreen(false);
+
+  const palette = document.getElementById('notes-highlight-palette');
+  if (palette) palette.style.display = 'none';
+  document.getElementById('notes-highlight-chevron')?.setAttribute('aria-expanded', 'false');
 
   if (emptyStateEl) {
     emptyStateEl.style.display = 'flex';
@@ -553,6 +560,236 @@ function insertAround(prefix, suffix = prefix, defaultText = 'text') {
   insertTextAtSelection(replacement, start + prefix.length, start + prefix.length + textToInsert.length);
 }
 
+/* ============================================================
+   Multi-Color Highlighting Engine
+   ============================================================ */
+
+export const HIGHLIGHT_COLORS = {
+  yellow: { name: 'Yellow', hex: '#facc15' },
+  green:  { name: 'Green',  hex: '#4ade80' },
+  blue:   { name: 'Blue',   hex: '#60a5fa' },
+  purple: { name: 'Purple', hex: '#c084fc' },
+  pink:   { name: 'Pink',   hex: '#f472b6' },
+  orange: { name: 'Orange', hex: '#fb923c' }
+};
+
+let activeHighlightColor = (() => {
+  try {
+    const saved = localStorage.getItem('orbit_notes_highlight_color');
+    if (saved && HIGHLIGHT_COLORS[saved]) return saved;
+  } catch {}
+  return 'yellow';
+})();
+
+/**
+ * Set active highlight color and update toolbar indicators.
+ * @param {string} color
+ */
+export function setHighlightColor(color) {
+  if (!HIGHLIGHT_COLORS[color]) color = 'yellow';
+  activeHighlightColor = color;
+
+  try {
+    localStorage.setItem('orbit_notes_highlight_color', color);
+  } catch {}
+
+  const colorBar = document.getElementById('notes-highlight-color-bar');
+  if (colorBar) {
+    colorBar.style.backgroundColor = HIGHLIGHT_COLORS[color].hex;
+  }
+
+  const btn = document.getElementById('notes-btn-highlight');
+  if (btn) {
+    btn.setAttribute('title', `Highlight (${HIGHLIGHT_COLORS[color].name}, Ctrl+H)`);
+  }
+
+  document.querySelectorAll('.notes-palette-color-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.color === color);
+  });
+}
+
+/**
+ * Apply highlight color to current selection or active word/cursor.
+ * @param {string} [color]
+ */
+export function applyHighlight(color = activeHighlightColor) {
+  if (!HIGHLIGHT_COLORS[color]) color = 'yellow';
+  setHighlightColor(color);
+
+  if (!textareaEl) return;
+  textareaEl.focus();
+  pushUndoSnapshot(true);
+
+  const start = textareaEl.selectionStart;
+  const end = textareaEl.selectionEnd;
+  const val = textareaEl.value;
+  const selected = val.substring(start, end);
+
+  const prefix = color === 'yellow' ? '==' : `==${color}:`;
+  const suffix = '==';
+
+  // 1. If text is selected
+  if (start !== end) {
+    // If the selection itself is already wrapped in ==...==
+    if (selected.startsWith('==') && selected.endsWith('==') && selected.length >= 4) {
+      const inner = selected.slice(2, -2).replace(/^(?:yellow|green|blue|purple|pink|orange)[:|]/i, '');
+      const replacement = `${prefix}${inner}${suffix}`;
+      insertTextAtSelection(replacement, start, start + replacement.length);
+    } else {
+      const replacement = `${prefix}${selected}${suffix}`;
+      insertTextAtSelection(replacement, start, start + replacement.length);
+    }
+    return;
+  }
+
+  // 2. If cursor is collapsed (start === end), check if inside an existing highlight on the line
+  const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+  let lineEnd = val.indexOf('\n', end);
+  if (lineEnd === -1) lineEnd = val.length;
+  const line = val.substring(lineStart, lineEnd);
+  const offsetInLine = start - lineStart;
+
+  const hlRegex = /==(?:(yellow|green|blue|purple|pink|orange)[:|])?([^=\n\r]+?)==/gi;
+  let m;
+  let insideMatch = null;
+  while ((m = hlRegex.exec(line)) !== null) {
+    const mStart = m.index;
+    const mEnd = m.index + m[0].length;
+    if (offsetInLine >= mStart && offsetInLine <= mEnd) {
+      insideMatch = {
+        start: lineStart + mStart,
+        end: lineStart + mEnd,
+        inner: m[2]
+      };
+      break;
+    }
+  }
+
+  if (insideMatch) {
+    const replacement = `${prefix}${insideMatch.inner}${suffix}`;
+    textareaEl.setSelectionRange(insideMatch.start, insideMatch.end);
+    insertTextAtSelection(replacement, insideMatch.start, insideMatch.start + replacement.length);
+  } else {
+    const textToInsert = 'highlighted text';
+    const replacement = `${prefix}${textToInsert}${suffix}`;
+    insertTextAtSelection(replacement, start + prefix.length, start + prefix.length + textToInsert.length);
+  }
+}
+
+/**
+ * Remove highlight from selected text or from highlight under cursor.
+ */
+export function removeHighlight() {
+  if (!textareaEl) return;
+  textareaEl.focus();
+  pushUndoSnapshot(true);
+
+  const start = textareaEl.selectionStart;
+  const end = textareaEl.selectionEnd;
+  const val = textareaEl.value;
+  const selected = val.substring(start, end);
+
+  // If text is selected
+  if (start !== end) {
+    const hlRegex = /==(?:(yellow|green|blue|purple|pink|orange)[:|])?([^=\n\r]+?)==/gi;
+    if (selected.startsWith('==') && selected.endsWith('==') && selected.length >= 4) {
+      const inner = selected.slice(2, -2).replace(/^(?:yellow|green|blue|purple|pink|orange)[:|]/i, '');
+      insertTextAtSelection(inner, start, start + inner.length);
+    } else if (hlRegex.test(selected)) {
+      const stripped = selected.replace(/==(?:(yellow|green|blue|purple|pink|orange)[:|])?([^=\n\r]+?)==/gi, '$2');
+      insertTextAtSelection(stripped, start, start + stripped.length);
+    }
+    return;
+  }
+
+  // If cursor collapsed, check if inside an existing highlight
+  const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+  let lineEnd = val.indexOf('\n', end);
+  if (lineEnd === -1) lineEnd = val.length;
+  const line = val.substring(lineStart, lineEnd);
+  const offsetInLine = start - lineStart;
+
+  const hlRegex = /==(?:(yellow|green|blue|purple|pink|orange)[:|])?([^=\n\r]+?)==/gi;
+  let m;
+  let insideMatch = null;
+  while ((m = hlRegex.exec(line)) !== null) {
+    const mStart = m.index;
+    const mEnd = m.index + m[0].length;
+    if (offsetInLine >= mStart && offsetInLine <= mEnd) {
+      insideMatch = {
+        start: lineStart + mStart,
+        end: lineStart + mEnd,
+        inner: m[2]
+      };
+      break;
+    }
+  }
+
+  if (insideMatch) {
+    textareaEl.setSelectionRange(insideMatch.start, insideMatch.end);
+    insertTextAtSelection(insideMatch.inner, insideMatch.start, insideMatch.start + insideMatch.inner.length);
+  }
+}
+
+/**
+ * Initialize palette popover event listeners.
+ */
+function initHighlightPalette() {
+  const chevronBtn = document.getElementById('notes-highlight-chevron');
+  const paletteEl = document.getElementById('notes-highlight-palette');
+  const clearBtn = document.getElementById('notes-highlight-clear-btn');
+
+  // Initialize UI with active color
+  setHighlightColor(activeHighlightColor);
+
+  chevronBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!paletteEl) return;
+    const isShown = paletteEl.style.display !== 'none';
+    paletteEl.style.display = isShown ? 'none' : 'flex';
+    chevronBtn.setAttribute('aria-expanded', String(!isShown));
+  });
+
+  // Color swatch buttons in palette
+  document.querySelectorAll('.notes-palette-color-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const color = btn.dataset.color;
+      applyHighlight(color);
+      if (paletteEl) paletteEl.style.display = 'none';
+      chevronBtn?.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Clear button
+  clearBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeHighlight();
+    if (paletteEl) paletteEl.style.display = 'none';
+    chevronBtn?.setAttribute('aria-expanded', 'false');
+  });
+
+  // Close palette on click outside or escape
+  document.addEventListener('click', (e) => {
+    if (paletteEl && paletteEl.style.display !== 'none') {
+      if (!e.target.closest('#notes-highlight-group')) {
+        paletteEl.style.display = 'none';
+        chevronBtn?.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && paletteEl && paletteEl.style.display !== 'none') {
+      paletteEl.style.display = 'none';
+      chevronBtn?.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 /**
  * Prefix each selected line (or current line) with a prefix (headings, lists, quotes).
  * @param {string} prefix - e.g. '# ', '- ', '> '
@@ -725,8 +962,7 @@ function handleTextareaKeydown(e) {
 
       if (key === 'h') {
         e.preventDefault();
-        pushUndoSnapshot(true);
-        insertAround('==', '==', 'highlighted text');
+        applyHighlight(activeHighlightColor);
         return;
       }
 
@@ -1048,7 +1284,7 @@ export function initNotesEditor() {
         case 'bold':          insertAround('**', '**', 'bold text'); break;
         case 'italic':        insertAround('*', '*', 'italic text'); break;
         case 'strikethrough': insertAround('~~', '~~', 'strikethrough'); break;
-        case 'highlight':     insertAround('==', '==', 'highlighted text'); break;
+        case 'highlight':     applyHighlight(activeHighlightColor); break;
         case 'h1':            insertLinePrefix('# '); break;
         case 'h2':            insertLinePrefix('## '); break;
         case 'h3':            insertLinePrefix('### '); break;
@@ -1088,12 +1324,15 @@ export function initNotesEditor() {
     }
   });
 
-  // 9. Action buttons
+  // 9. Multi-color highlight palette
+  initHighlightPalette();
+
+  // 10. Action buttons
   document.getElementById('notes-export-btn')?.addEventListener('click', exportNote);
   document.getElementById('notes-copy-btn')?.addEventListener('click', copyNoteContent);
   pinBtnEl?.addEventListener('click', toggleCurrentPin);
 
-  // 10. Window resize handler to guard split mode on mobile
+  // 11. Window resize handler to guard split mode on mobile
   window.addEventListener('resize', () => {
     if (window.innerWidth < 768 && currentViewMode === 'split') {
       setViewMode('edit');

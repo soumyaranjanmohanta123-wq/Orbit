@@ -906,6 +906,144 @@
   margin: 0 var(--space-1);
 }
 
+/* --- Multi-color Highlighter Toolbar & Palette Popover --- */
+.notes-highlight-group {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  gap: 1px;
+}
+
+.notes-highlight-btn {
+  position: relative;
+}
+
+.notes-highlight-color-bar {
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  border-radius: 2px;
+  background-color: #facc15;
+  pointer-events: none;
+  transition: background-color var(--transition-fast);
+}
+
+.notes-highlight-chevron {
+  width: 14px !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.notes-highlight-chevron:hover {
+  color: var(--color-text-primary);
+}
+
+.notes-highlight-palette {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 150px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeIn 0.12s ease;
+}
+
+.notes-highlight-palette__title {
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px 4px;
+  user-select: none;
+}
+
+.notes-highlight-palette__colors {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.notes-palette-color-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.notes-palette-color-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.notes-palette-color-btn.active {
+  background: var(--color-surface-active);
+  font-weight: var(--weight-semibold);
+}
+
+.color-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.color-swatch--yellow { background-color: #facc15; }
+.color-swatch--green  { background-color: #4ade80; }
+.color-swatch--blue   { background-color: #60a5fa; }
+.color-swatch--purple { background-color: #c084fc; }
+.color-swatch--pink   { background-color: #f472b6; }
+.color-swatch--orange { background-color: #fb923c; }
+
+.notes-highlight-palette__footer {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.notes-palette-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.notes-palette-clear-btn:hover {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
 
 /* ============================================================
    18. Note Title Input
@@ -1083,22 +1221,93 @@
   color: var(--color-text-tertiary);
 }
 
+/* Base highlight styling */
 mark,
 .markdown-body mark,
 .note-highlight {
-  background-color: #fef08a;
-  color: #854d0e;
   padding: 0.1em 0.35em;
   border-radius: var(--radius-sm);
   font-weight: 500;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Yellow (Default) */
+mark,
+.markdown-body mark,
+.note-highlight,
+.note-highlight--yellow {
+  background-color: #fef08a;
+  color: #854d0e;
 }
 
 [data-theme="dark"] mark,
 [data-theme="dark"] .markdown-body mark,
-[data-theme="dark"] .note-highlight {
-  background-color: rgba(234, 179, 8, 0.28);
+[data-theme="dark"] .note-highlight,
+[data-theme="dark"] .note-highlight--yellow {
+  background-color: rgba(250, 204, 21, 0.28);
   color: #fef08a;
-  border: 1px solid rgba(234, 179, 8, 0.4);
+  border: 1px solid rgba(250, 204, 21, 0.4);
+}
+
+/* Green */
+.note-highlight--green {
+  background-color: #bbf7d0;
+  color: #166534;
+}
+
+[data-theme="dark"] .note-highlight--green {
+  background-color: rgba(34, 197, 94, 0.28);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* Blue */
+.note-highlight--blue {
+  background-color: #bfdbfe;
+  color: #1e40af;
+}
+
+[data-theme="dark"] .note-highlight--blue {
+  background-color: rgba(59, 130, 246, 0.28);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Purple */
+.note-highlight--purple {
+  background-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+[data-theme="dark"] .note-highlight--purple {
+  background-color: rgba(168, 85, 247, 0.28);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+/* Pink */
+.note-highlight--pink {
+  background-color: #fbcfe8;
+  color: #9d174d;
+}
+
+[data-theme="dark"] .note-highlight--pink {
+  background-color: rgba(244, 63, 94, 0.28);
+  color: #fca5a5;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+/* Orange */
+.note-highlight--orange {
+  background-color: #fed7aa;
+  color: #9a3412;
+}
+
+[data-theme="dark"] .note-highlight--orange {
+  background-color: rgba(249, 115, 22, 0.28);
+  color: #fdba74;
+  border: 1px solid rgba(249, 115, 22, 0.4);
 }
 
 .markdown-body a {

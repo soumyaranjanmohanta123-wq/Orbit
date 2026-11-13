@@ -475,12 +475,62 @@
                     <path d="M16 4H9a3 3 0 0 0-2.83 4M14 12a4 4 0 0 1 0 8H6"/><line x1="4" y1="12" x2="20" y2="12"/>
                   </svg>
                 </button>
-                <button type="button" class="notes-toolbar__btn" data-format="highlight" title="Highlight (==text==, Ctrl+H)" aria-label="Highlight">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m9 11-6 6v3h3l6-6"/>
-                    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
-                  </svg>
-                </button>
+
+                <!-- Multi-color Highlight Tool with Palette Popover -->
+                <div class="notes-highlight-group" id="notes-highlight-group">
+                  <button type="button" class="notes-toolbar__btn notes-highlight-btn" id="notes-btn-highlight" data-format="highlight" title="Highlight (Yellow, Ctrl+H)" aria-label="Highlight">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m9 11-6 6v3h3l6-6"/>
+                      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+                    </svg>
+                    <span class="notes-highlight-color-bar" id="notes-highlight-color-bar"></span>
+                  </button>
+                  <button type="button" class="notes-toolbar__btn notes-highlight-chevron" id="notes-highlight-chevron" title="Choose highlight color" aria-label="Choose highlight color" aria-haspopup="true" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 10px; height: 10px;">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+
+                  <!-- Palette Dropdown Popover -->
+                  <div class="notes-highlight-palette" id="notes-highlight-palette" role="menu" aria-label="Highlight colors" style="display: none;">
+                    <div class="notes-highlight-palette__title">Highlight Color</div>
+                    <div class="notes-highlight-palette__colors">
+                      <button type="button" class="notes-palette-color-btn active" data-color="yellow" role="menuitem" title="Yellow (default)">
+                        <span class="color-swatch color-swatch--yellow"></span>
+                        <span class="color-name">Yellow</span>
+                      </button>
+                      <button type="button" class="notes-palette-color-btn" data-color="green" role="menuitem" title="Green">
+                        <span class="color-swatch color-swatch--green"></span>
+                        <span class="color-name">Green</span>
+                      </button>
+                      <button type="button" class="notes-palette-color-btn" data-color="blue" role="menuitem" title="Blue">
+                        <span class="color-swatch color-swatch--blue"></span>
+                        <span class="color-name">Blue</span>
+                      </button>
+                      <button type="button" class="notes-palette-color-btn" data-color="purple" role="menuitem" title="Purple">
+                        <span class="color-swatch color-swatch--purple"></span>
+                        <span class="color-name">Purple</span>
+                      </button>
+                      <button type="button" class="notes-palette-color-btn" data-color="pink" role="menuitem" title="Pink">
+                        <span class="color-swatch color-swatch--pink"></span>
+                        <span class="color-name">Pink</span>
+                      </button>
+                      <button type="button" class="notes-palette-color-btn" data-color="orange" role="menuitem" title="Orange">
+                        <span class="color-swatch color-swatch--orange"></span>
+                        <span class="color-name">Orange</span>
+                      </button>
+                    </div>
+                    <div class="notes-highlight-palette__footer">
+                      <button type="button" class="notes-palette-clear-btn" id="notes-highlight-clear-btn" role="menuitem" title="Remove highlight">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        <span>Remove Highlight</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="notes-toolbar__divider"></div>
 
